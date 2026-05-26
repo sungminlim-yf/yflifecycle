@@ -1,0 +1,10 @@
+# Playwright MCP 임시 로그/스냅샷
+.playwright-mcp/
+
+# macOS 시스템 파일
+.DS_Store
+
+# 환경 변수·비밀키 (실수로 토큰/API 키 올리는 것 방지)
+.env
+.env.local
+*.key
