@@ -114,6 +114,59 @@
 
 ---
 
+## SMS 로그 테이블 — `SMS Log`
+
+> **역할**: ClickSend로 발송한 모든 SMS 기록. #6a(주문 확인) 멱등 키, #6b(분실 복구) rate limit 카운트 source, 운영 감사·디버깅. 영구 보관.
+
+| 필드 | 타입 | 비고 |
+| --- | --- | --- |
+| `sms_id` | autonumber | primary |
+| `type` | single select | `order_confirmation` / `recovery` / `recovery_miss` / `recovery_blocked` |
+| `phone` | text | E.164 정규화 (`+614XXXXXXXX`) |
+| `body` | long text | 실제 발송 본문 (`recovery_miss`·`recovery_blocked`는 비움) |
+| `order_no` | link → 오더 | #6a 한정 — 멱등 기준 |
+| `customer` | link → 고객 | 매칭됐을 때 (#6a 옵션, #6b 매칭 시) |
+| `clicksend_message_id` | text | ClickSend 응답 |
+| `clicksend_status` | single select | `Success` / `Failed` / `Queued` |
+| `cost_aud` | number | ClickSend `message_price` (segment·국가별 변동) |
+| `error_message` | text | 실패 시 |
+| `sent_at` | datetime | rate limit 윈도우 기준 — index 권장 |
+
+뷰 후보: **최근 24h** (sent_at sort), **Failed 큐** (status=Failed, Slack 알림 follow-up), **type별 통계** (월별 group by), **rate-limited** (type=recovery_blocked, 남용 패턴 분석).
+
+> 워크플로우 노드 흐름은 `../n8n/CLAUDE.md` #6a/#6b 상세. rate limit 정책: 전화번호 기준 시간당 3건·일 10건 (silent absorb).
+
+---
+
+## 온보딩 신청 테이블 — `Onboarding Submissions` (staging)
+
+> **역할**: Tally 폼 제출 ~ 영업 승인 사이의 staging. n8n #7a가 생성, 영업이 review, #7b가 승인 후 고객 테이블로 propagate. 운영 가시화 + 멱등 키 보관 + 매칭 실패·forward 오염 케이스 처리 흔적.
+
+| 필드 | 타입 | 비고 |
+| --- | --- | --- |
+| `submission_id` | text (unique) | Tally `submissionId` — #7a 멱등키 |
+| `tally_form_id` | text | 다중 폼 운영 시 구분 |
+| `submitted_at` | datetime | Tally 제출 시각 |
+| `hubspot_company_id` | text | 매칭된 HubSpot Company ID (매칭 실패 시 비움) |
+| `matched_via` | single select | `hubspot_id` / `hubspot_id_disputed` / `email` / `unmatched` / `invalid_id` |
+| `forward_guard_flag` | checkbox | hidden ID 있으나 form email ≠ HubSpot Contact email |
+| `shop_name`, `entity_name`, `abn`, `delivery_address` | text | 폼 입력값 |
+| `form_email`, `form_phone` | text | 폼 입력 연락처 |
+| `account_contact_name`, `account_contact_email`, `account_contact_phone` | text | (선택) 회계 담당 별도 |
+| `payment_term_selection` | single select | `GoCardless DD` / `7-day credit` / `Prepay` / `COD` |
+| `gocardless_mandate_id` | text | DD 완료 시 |
+| `raw_payload_json` | long text | Tally raw payload 보관 (포렌식) |
+| `status` | single select | `under review` / `propagated` / `rejected` / `archived` |
+| `linked_customer` | link → 고객 | #7b가 propagate 후 채움 |
+| `slack_thread_ts` | text | `#ops-onboarding` 알림 thread 회신용 |
+| `created_at`, `updated_at` | datetime | |
+
+뷰 후보: **review 큐** (status=under review), **forward guard 큐** (flag=true), **매칭 실패 큐** (matched_via=unmatched), **archived**.
+
+> 워크플로우 노드 흐름은 `../n8n/CLAUDE.md` #7a/#7b 상세.
+
+---
+
 ## 유용한 뷰
 
 - **미배정 큐**: 고객 미배정 → 영업 신규 리드 전환 대기열

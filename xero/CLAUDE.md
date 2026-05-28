@@ -33,9 +33,11 @@
 
 ### 선결제/COD 고객 (dispatch 전 결제)
 
+- **모델**: "주문 후 빠른 선결제" — 호주 일반 "배달 시 현장 결제" 모델이 아니라, 결제 완료가 dispatch의 전제. COD도 같은 메커니즘 (단지 영업적 명명 차이).
 - 출하 상태 = **Hold** → 결제 확인 후 출하
-- 결제 경로 ①: 직접 계좌이체 → 입금 확인 후 Xero 인보이스 Paid 처리
-- 결제 경로 ②: Xero 인보이스 "Pay now" 링크 → 온라인 결제 → 자동 Paid (운영 권장)
+- **결제 채널 = Manual bank transfer** (확정 2026-05-28). Xero PDF에 회사 계좌(BSB·계좌번호) 명시. bank feed가 들어오면 Xero가 invoice 자동 매칭 (또는 admin 수동) → status `PAID` → n8n #3가 Airtable 오더 hold 해제.
+- 운영 액션: Xero **Branding theme**의 invoice footer/payment instructions에 계좌 정보 사전 등록. DD/7-day 인보이스에도 같은 theme이 적용되지만 자동 수금이라 계좌 안내는 무시됨.
+- 향후 검토 (운영 안정화 후): Xero "Pay now" 링크 (Stripe 카드) 또는 GoCardless one-off — 빠르지만 셋업·수수료 필요.
 
 ---
 

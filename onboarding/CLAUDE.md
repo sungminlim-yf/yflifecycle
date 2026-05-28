@@ -69,6 +69,19 @@
 - mandate 동의 후 → 이후 수금은 Xero–GoCardless 네이티브 자동 (상세 `../xero/`)
 - HubSpot/Xero/Airtable 매핑은 Tally → n8n webhook → 각 시스템에 propagate (상세 `../n8n/`)
 
+### 폼 발송·매칭 패턴 (확정 2026-05-28)
+
+영업사원·고객 셀프·어드민 누가 진행하든 동일한 진입점을 쓰는 단순 모델.
+
+1. **발송 = HubSpot 이메일 템플릿**. 본문의 Tally 링크에 HubSpot personalization token으로 `hubspot_id` (Company ID), `email` 등을 URL 파라미터로 prefill.
+   - 예: `https://tally.so/r/<form>?hubspot_id={{company.hs_object_id}}&email={{contact.email}}`
+2. **Tally hidden field** 가 URL 파라미터를 받아 폼 UI에는 안 보이고 webhook payload에만 실림.
+3. **n8n webhook(워크플로우 #7)** 이 payload 받자마자 `hubspot_id`로 HubSpot Company를 직접 매칭 → 수동 매칭 0.
+4. **Forward 오염 가드**: hidden `hubspot_id` 있을 때, 폼 입력 `email` vs HubSpot Contact email cross-check. 불일치 → Slack `#ops-onboarding`, propagate 보류, 영업이 판단.
+5. **ID 없이 진입 fallback** (영업이 Tally 링크를 직접 열어 같이 작성 등): `hubspot_id` 비어 있으면 폼 입력 email로 HubSpot Contact 검색 후 매칭. 없으면 신규 생성 큐로.
+
+> 매칭·생성 워크플로우 노드 흐름은 `../n8n/` 워크플로우 #7.
+
 ---
 
 ## 확정된 결정 (이 도메인)
@@ -76,3 +89,4 @@
 - 토큰: 영구 + 신고 시 폐기·재발급 (정책은 본 폴더, 분실 UX는 `../order-site/`)
 - 온보딩 폼: **Tally** + GoCardless Billing Request Flow
 - 4단계에 **고객 그룹 지정**(영업 판단) + **Xero default discount % 자동 입력**(그룹 기반) 포함
+- **폼 발송·매칭 = HubSpot 이메일 템플릿 + Tally hidden field로 `hubspot_id` 박아 보냄** (2026-05-28) — 영업·고객·어드민 어느 진입 경로든 단일 패턴. n8n #7이 ID 우선 매칭, email cross-check로 forward 가드, ID 없으면 email fallback.
