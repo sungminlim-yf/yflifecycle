@@ -40,12 +40,12 @@
 - 상세는 아래 "워크플로우 #2 상세" 섹션.
 - **scope**: DD / 7-day credit 한정. 선결제·COD는 #2.5(주문 직후) 별도.
 
-### 3. Xero → Airtable 결제·Hold 동기화
-- **Xero webhook 실시간 + 주기적 reconciliation 폴백** (webhook 유실 대비).
-- Paid → 결제 상태/Hold 해제. 고객 hold·hold reason·outstanding 반영.
+### 3. Xero → Airtable 결제·Hold 동기화 ✅ 설계 완료
+- 상세는 아래 "워크플로우 #3 상세" 섹션.
+- 핵심: INVOICE.UPDATE webhook + 매시간 polling 폴백, 결제 상태 + 오더 Hold 동기화, 고객 hold 산출(outstanding ≥ credit_limit OR overdue ≥ 1).
 
-### 4. credit limit 비교 계산 (별도 로직) ⚠️
-- Xero는 credit limit 초과를 push로 주지 않음 → **outstanding 합계 vs credit limit 비교를 n8n(또는 Airtable)에서 직접 계산** → 고객 hold 산출.
+### 4. credit limit 비교 → **#3에 통합** (2026-05-28)
+- Xero는 credit limit 초과를 push로 주지 않음 → 별도 워크플로우 분리하지 않고, **#3 처리 중 매번 outstanding 합계를 재계산해 credit_limit·overdue와 비교**해 고객 hold 산출. 단일 워크플로우 관리.
 
 ### 5. 재무 상태 → HubSpot 공유
 - 영업이 볼 hold status/reason·overdue·outstanding을 Airtable에서 HubSpot으로 (공유 항목 정의는 `../xero/`).
@@ -199,6 +199,86 @@
 
 ---
 
+## 워크플로우 #3 상세: Xero → Airtable 결제·Hold 동기화
+
+> **scope**: 인보이스 결제 상태 + 고객 hold(credit limit·overdue) 동기화. credit note·invoice void는 수동 처리(`../xero/` 정책).
+
+### 트리거 (이중 구조)
+
+- **Xero webhook** (`INVOICE.UPDATE`) — 절대 다수 처리, 실시간
+- **n8n cron 매시간 :05** — webhook 유실 대비 폴링 폴백
+- 두 트리거 모두 동일한 메인 처리 노드로 합류
+
+### Webhook 검증
+
+- 헤더 `x-xero-signature` HMAC-SHA256 검증 (webhook key는 n8n credential `xero-webhook-key`에 보관)
+- 검증 실패 → `401` + 로그
+- payload: `{ events: [{ resourceId: invoiceId, tenantId, eventCategory: "INVOICE", eventType: "UPDATE" }] }`
+
+### Polling 흐름
+
+1. cron 매시간 :05 트리거
+2. `GET /Invoices?ModifiedAfter={last_sync_at}` (Xero header `If-Modified-Since`도 같이)
+3. 응답의 invoice 목록을 webhook 처리 흐름과 동일하게 합류
+4. 성공 시 `last_sync_at = now` 갱신 (n8n datatable 또는 Airtable settings 테이블)
+
+### 메인 처리 흐름 (invoice 1건 단위)
+
+1. **Invoice fetch**: `GET /Invoices/{invoiceId}` — `Status`, `AmountDue`, `Contact.ContactID`, `DueDate`, `FullyPaidOnDate`, `Type` 확보
+2. **Airtable 오더 매칭**: 오더 테이블에서 `Xero 인보이스 ID = {invoiceId}` lookup
+   - 매칭 실패: Slack `#ops-accounts` 알림 ("Xero invoice가 Airtable 오더에 매칭 안됨"). 처리 종료
+3. **오더 update** (Airtable):
+   - `결제 상태`: `Status == "PAID"` 또는 `AmountDue == 0` → `Paid`, 그 외 `미결제`
+   - `오더 Hold`: 선결제·COD payment term 한정 — Paid면 hold 해제 (`false`)
+   - 멱등: 현 값과 같으면 skip
+4. **Contact 매칭**: 고객 테이블에서 `Xero ContactID = Invoice.Contact.ContactID` lookup
+   - 매칭 실패: Slack `#ops-accounts` 알림. invoice 단위 update는 step 3에서 완료, 고객 hold 재계산은 skip
+5. **Outstanding 재계산**: `GET /Invoices?ContactID={contactId}&Statuses=AUTHORISED,SUBMITTED&Type=ACCREC`
+   - `outstanding = Σ AmountDue`
+   - `overdue_count = COUNT(WHERE due_date < today)`
+   - `overdue_amount = Σ AmountDue WHERE due_date < today`
+6. **Credit limit fetch**: `GET /Contacts/{contactId}` → Xero Contact의 credit limit 필드
+7. **Hold 산출**:
+   - `hold = (outstanding ≥ credit_limit) OR (overdue_count ≥ 1)`
+   - `hold_reason` (우선순위):
+     - `overdue_count ≥ 1` → `"overdue: {n}건, ${overdue_amount}"`
+     - 그 외 `outstanding ≥ credit_limit` → `"credit limit: ${outstanding}/${credit_limit}"`
+   - `overdue` 정의: `due_date < today AND Status ≠ PAID`
+8. **Airtable 고객 update**:
+   - `고객 hold` = boolean
+   - `hold_reason` = 문자열 (hold면)
+   - `outstanding` = 합계 (영업·Admin 표시용)
+   - 멱등: 모두 같으면 skip
+
+### Hold 상태 후속
+
+- 고객 hold = false로 풀림 → 진행 중 오더는 다음 dispatch 시도 시 자동으로 가능 (출하 가능 = NOT(고객 hold) AND NOT(오더 hold))
+- 고객 hold = true로 걸림 → 미dispatch 오더는 다음 dispatch 시도 시 차단 (워크플로우 #2가 안전 체크에서 거름)
+- 오더 hold 해제는 결제 단위 — 고객 hold 풀려도 오더 hold는 그대로 (별 트리거)
+
+### 멱등성
+
+- Webhook 중복 수신: 동일 invoice update가 여러 번 와도 step 3·8의 "현 값과 같으면 skip" 가드로 no-op
+- Polling 부분 실패: `last_sync_at`은 성공 시에만 갱신. 다음 polling이 미처리 invoice 재처리 (멱등이라 안전)
+- Webhook + polling 동시 처리: 동일 결과로 수렴
+
+### 에러 처리
+
+| 에러 | 동작 |
+| --- | --- |
+| Webhook 서명 검증 실패 | `401` + 로그 |
+| Xero API 5xx | n8n 자동 재시도. 누락분은 다음 polling이 잡음 |
+| invoice 매칭 실패 (Xero 있음 / Airtable 없음) | Slack `#ops-accounts` (수동 등록 또는 무시 판단) |
+| contact 매칭 실패 | Slack `#ops-accounts`. invoice update는 그대로, 고객 hold 재계산만 skip |
+| Airtable API 실패 | n8n 자동 재시도. polling이 보험 |
+
+### 관련 미결
+
+- credit_limit이 Xero Contact에 미설정인 경우 default: **`∞`로 간주(hold 안 걸림)** 권장 (Slack 경고만). 운영 시작 시점 재검토.
+- `last_sync_at` 보관 위치: 기본 **n8n datatable**. Airtable settings 테이블로 옮길지는 운영 안정화 후 결정.
+
+---
+
 ## Slack 채널 매핑 (ops-*)
 
 Workspace는 `action-required` 카테고리에 ops-* 채널 8개 + 별도 `#ops-accounts` (재무 알림용). 채널 ID는 워크플로우 자격증명 등록 시 입력.
@@ -233,5 +313,5 @@ Workspace는 `action-required` 카테고리에 ops-* 채널 8개 + 별도 `#ops-
 
 | 항목 | 메모 |
 | --- | --- |
-| 워크플로우 #3~#6 트리거·노드 설계 | #1·#2 완료. 다음 후보: #6(SMS) / #3(Xero→Airtable 결제 동기화) / #2.5(선결제·COD 인보이스) |
+| 워크플로우 #5·#6 + #2.5 트리거·노드 설계 | #1·#2·#3 완료. 다음 후보: #6(SMS) / #2.5(선결제·COD 인보이스) / #5(재무→HubSpot 공유) |
 | 각 ops-* 채널 ID 등록 | 채널은 만들어졌고 매핑 확정 — 워크플로우 구현 시점에 ID를 n8n 자격증명에 입력 |

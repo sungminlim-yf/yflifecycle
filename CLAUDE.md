@@ -84,6 +84,7 @@
 - **온보딩 폼**: **Tally** + GoCardless Billing Request Flow. 4단계에서 영업이 고객 그룹 지정 → Xero Contact default discount % 자동 입력.
 - **n8n 워크플로우 #1 (주문 제출 → Airtable)**: webhook 직행, 통합 endpoint(`mode` 분기), 서버 가격 산출, UUID v4 멱등키, 중복 의심 = 같은 배송일 + 동일 sku 조합. SMS는 sub-workflow fire-and-forget.
 - **n8n 워크플로우 #2 (dispatch → Xero 인보이스)**: DD/7-day 한정. Airtable 출하 상태 변경 트리거, 즉시 발행. 박스 단가 line(tax=`EXEMPTOUTPUT`) + 조건부 배송비 line(`<$300 → UnitAmount=5, tax=OUTPUT, DiscountRate=0 override` → 총 $5.50). 인보이스 `LineAmountTypes=Exclusive`. Xero Item Code = `KAT`/`GAR`/`TER`. Contact discount % 자동(내부 5%/일반 0%, 배송비 제외). Due date = 다음 화요일(DD)/+7일(7-day). PDF 자동 발송. 멱등은 `Xero 인보이스 ID` 필드 사전 체크 + reference로 부분실패 복구. 선결제·COD는 #2.5 별도.
+- **n8n 워크플로우 #3 (Xero → Airtable 결제·Hold 동기화)**: INVOICE.UPDATE webhook + 매시간 polling 폴백 이중 구조. invoice fetch → 오더 매칭 → 결제 상태/오더 Hold(선결제·COD 한정) update. 그 후 고객 contact의 outstanding 재계산 + credit limit·overdue 대비로 고객 hold 산출(`outstanding ≥ credit_limit OR overdue ≥ 1`). hold_reason은 overdue 우선. webhook HMAC-SHA256 서명 검증. 멱등은 "현 값과 같으면 skip" 가드 + last_sync_at 성공 시만 갱신. **#4(credit limit 비교)는 #3에 통합.**
 - **Xero 회사**: `Young Foods Pty Ltd` 신규 생성. **Custom Connection App** 생성·client key 보유 → n8n OAuth2 client credentials로 직접 호출 가능 (2026-05-28).
 
 ---
@@ -92,7 +93,7 @@
 
 | 항목                                              | 소유 폴더    |
 | ------------------------------------------------- | ------------ |
-| 워크플로우 #3~#6 + #2.5 트리거·노드 설계           | `n8n/`       |
+| 워크플로우 #5·#6 + #2.5 트리거·노드 설계           | `n8n/`       |
 | Target/Safety/default_dispatch 초기값 (3 SKU × 3 = 9개) | `airtable/` (영업·생산 협의) |
 
 > `onboarding/` · `order-site/` · `xero/` 도메인 미결은 모두 해소 — 각 폴더 "확정된 결정" 섹션 참조.
