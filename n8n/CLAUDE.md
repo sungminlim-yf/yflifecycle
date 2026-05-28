@@ -19,7 +19,7 @@
 
 | 출발 | 도착 | 내용 | 트리거(안) |
 | --- | --- | --- | --- |
-| 주문 사이트 | Airtable | 주문 제출 → 오더 + 라인아이템 행 생성 | 폼/웹훅 |
+| 주문 사이트 | Airtable | 주문 제출 → 오더 + 라인아이템 행 생성 (서버 가격 산출 + MOQ $150 검증) | 폼/웹훅 |
 | Airtable | Xero | **dispatch 시** 인보이스 생성 (payment term별 분기) | dispatch 상태 변경 |
 | Xero | Airtable | 인보이스 Paid → 결제 Paid + Hold 해제 / 고객 hold·hold reason·outstanding 동기화 | Xero webhook + 폴링 폴백 |
 | GoCardless | Xero | DD 수금 결과 자동 반영·대사 | (Xero 네이티브, n8n 불필요) |
@@ -34,7 +34,7 @@
 
 ### 1. 주문 제출 → Airtable ✅ 설계 완료
 - 상세는 아래 "워크플로우 #1 상세" 섹션 참조.
-- 핵심: webhook 직행, 통합 endpoint(mode 분기), 서버 가격 산출, UUID 멱등키, 같은 배송일+동일 sku 조합 = 중복 의심.
+- 핵심: webhook 직행, 통합 endpoint(mode 분기), 서버 가격 산출, **MOQ $150 검증**(할인 전 subtotal), UUID 멱등키, 같은 배송일+동일 sku 조합 = 중복 의심.
 
 ### 2. dispatch → Xero 인보이스 생성 ✅ 설계 완료
 - 상세는 아래 "워크플로우 #2 상세" 섹션.
@@ -88,12 +88,13 @@
    - `magic_link`: 토큰으로 Airtable 고객 lookup → 고객 ID 확정. 유효 X → `401`/`410`
    - `guest`: 고객 미배정 (Airtable 오더 행에 고객 link 비움)
 5. **가격 산출**: 각 line의 sku로 제품 테이블 lookup → 박스 단가 × `quantity_boxes` → line subtotal
-6. **중복 의심 체크**: 같은 고객(또는 게스트면 `store_name + contact_phone`) + 같은 `requested_delivery_date` + sku 조합 일치(수량 무관)? → Slack `#orders-watch` 알림. 새 오더는 정상 저장 (블로킹 X).
-7. **오더 행 생성** (Airtable): 주문번호 Auto number, 멱등키, 고객/게스트 정보, 배송지 3필드, payment term lookup, 출하 상태 = `접수`
-8. **라인아이템 행 생성** (Airtable): line별 행 — sku link, quantity_boxes, 박스 단가, subtotal
-9. **게스트 분기 → Slack 알림** (`#orders-unassigned`, 영업 액션 대기 — `../onboarding/` 승격 큐)
-10. **SMS sub-workflow 호출** (fire-and-forget, 워크플로우 #6): 주문번호·예상 배송일·매직링크
-11. **응답 반환** (200)
+6. **MOQ 검증**: Σ(line subtotal) **(할인 적용 전)** < `AUD 150` → `422 below_moq` + `{minimum: 150, current: <subtotal>}` 응답 후 종료. 사이트 인라인 안내용.
+7. **중복 의심 체크**: 같은 고객(또는 게스트면 `store_name + contact_phone`) + 같은 `requested_delivery_date` + sku 조합 일치(수량 무관)? → Slack `#ops-orders` 알림. 새 오더는 정상 저장 (블로킹 X).
+8. **오더 행 생성** (Airtable): 주문번호 Auto number, 멱등키, 고객/게스트 정보, 배송지 3필드, payment term lookup, 출하 상태 = `접수`
+9. **라인아이템 행 생성** (Airtable): line별 행 — sku link, quantity_boxes, 박스 단가, subtotal
+10. **게스트 분기 → Slack 알림** (`#ops-orders`, 영업 액션 대기 — `../onboarding/` 승격 큐)
+11. **SMS sub-workflow 호출** (fire-and-forget, 워크플로우 #6): 주문번호·예상 배송일·매직링크
+12. **응답 반환** (200)
 
 ### 응답 형식 (200)
 
@@ -120,7 +121,7 @@
 ### 중복 주문 의심 (D 결정)
 
 - **기준**: 같은 고객 + 같은 `requested_delivery_date` + sku 조합 일치 (수량 무관).
-- **동작**: Slack `#orders-watch` 알림. 새 오더는 정상 저장. admin이 둘 다 진행할지 하나 취소할지 판단.
+- **동작**: Slack `#ops-orders` 알림. 새 오더는 정상 저장. admin이 둘 다 진행할지 하나 취소할지 판단.
 
 ### 에러 처리
 
@@ -128,10 +129,11 @@
 | --- | --- | --- |
 | 검증 실패 | 4xx + code | 클라이언트가 표시 |
 | 토큰 무효 | 401/410 | "링크 재발급 안내" 응답 |
-| 컷오프 초과 | 422 | 다음 가능일 안내 |
+| 컷오프 초과 | 422 `cutoff_exceeded` | 다음 가능일 안내 |
+| **MOQ 미달** | **422 `below_moq`** | 사이트가 "최소 주문 금액 $150" 인라인 안내 |
 | Airtable API 5xx | n8n 자동 재시도 | 멱등키 덕에 안전 |
 | SMS 실패 | non-blocking | 주문은 성공, SMS 워크플로우 자체에서 재시도/로깅 |
-| 그 외 catastrophic | 500 + Slack `#orders-alert` | admin 확인 |
+| 그 외 catastrophic | 500 + Slack `#ops-orders` | admin 확인 |
 
 ---
 
@@ -155,7 +157,7 @@
 2. **오더 + 라인아이템 + 고객 fetch** (Airtable)
 3. **안전 체크** (위 3가지). 실패 → 종료
 4. **Line item 구성** (라인아이템별):
-   - `ItemCode`: 제품 테이블의 Xero Item Code lookup
+   - `ItemCode`: 제품 테이블의 Xero Item Code lookup (`KAT`/`GAR`/`TER`)
    - `Description`: 제품명 + sku
    - `Quantity`: quantity_boxes
    - `UnitAmount`: 박스 단가
@@ -163,13 +165,13 @@
    - `DiscountRate`: **미설정** → Xero가 Contact default discount % 자동 적용 (내부 5% / 일반 0%)
 5. **subtotal 계산**: Σ(UnitAmount × Quantity) — 할인 적용 전 기준
 6. **배송비 line 조건부 추가**:
-   - `subtotal < AUD 300`: line 추가 — Description="Delivery fee", Quantity=1, UnitAmount=10, TaxType=`EXEMPTOUTPUT`(임시), **`DiscountRate=0` 명시 override** (그룹 할인 제외)
+   - `subtotal < AUD 300`: line 추가 — Description="Delivery fee", Quantity=1, **UnitAmount=5**, **TaxType=`OUTPUT`** (GST on Income 10%), **`DiscountRate=0` 명시 override** (그룹 할인 제외) → 인보이스에 GST $0.50 별도 표기, 고객 부담 $5.50
    - `subtotal ≥ AUD 300`: 배송비 line 없음
 7. **Due date 산정**:
    - DD: 다음 화요일 (단 발행일이 월·화면 다음 주 화요일)
    - 7-day credit: `dispatch_date + 7일`
 8. **Xero invoice 생성** (`POST /Invoices`):
-   - `Type`: `ACCREC`, `Contact`: Xero ContactID, `Date`: dispatch 시각, `DueDate`: 위 산정, `LineItems`: 위 구성, `Status`: `AUTHORISED`, `Reference`: 주문번호
+   - `Type`: `ACCREC`, `Contact`: Xero ContactID, `Date`: dispatch 시각, `DueDate`: 위 산정, `LineItems`: 위 구성, `Status`: `AUTHORISED`, `Reference`: 주문번호, **`LineAmountTypes`: `Exclusive`** (배송비 GST 별도 표기)
 9. **Invoice 자동 발송** (`POST /Invoices/{id}/Email`): PDF email 즉시
 10. **Airtable update**: 오더 행의 `Xero 인보이스 ID`에 invoice ID 저장. `결제 상태` = `미결제` 유지
 11. **GoCardless DD**의 경우: Xero–GoCardless 네이티브가 due date에 자동 collection 제출. n8n 추가 작업 없음.
@@ -184,29 +186,46 @@
 
 | 에러 | 동작 |
 | --- | --- |
-| payment term이 DD/7-day 아님 | skip + Slack `#orders-alert` |
-| 게스트(미배정) dispatch 시도 | skip + Slack `#orders-alert` (정책 위반) |
-| Xero Item Code 없음 | 인보이스 실패 → Slack `#orders-alert` → admin이 등록 후 재시도 |
-| Xero ContactID 없음 | skip + Slack `#orders-alert` (온보딩 누락) |
+| payment term이 DD/7-day 아님 | skip + Slack `#ops-accounts` |
+| 게스트(미배정) dispatch 시도 | skip + Slack `#ops-delivery` (정책 위반) |
+| Xero Item Code 없음 | 인보이스 실패 → Slack `#ops-accounts` → admin이 등록 후 재시도 |
+| Xero ContactID 없음 | skip + Slack `#ops-onboarding` (온보딩 누락) |
 | Xero API 5xx | n8n 자동 재시도 (멱등 체크로 안전) |
 | 부분 실패 | reference로 invoice search → ID 동기화 |
 
 ### 관련 미결
 
-- **Xero Item Code 등록** — `../airtable/products.md`의 빈 칸. 3 SKU 모두 Xero 측 매핑 필수.
-- **배송비 GST 처리** — 회계사 확인 후 `TaxType` 수정 가능 (현재 임시 `EXEMPTOUTPUT`).
 - **선결제·COD 인보이스 발행 시점** — #2.5 워크플로우 별도 설계 (주문 직후 자동 발행 가정).
+
+---
+
+## Slack 채널 매핑 (ops-*)
+
+Workspace는 `action-required` 카테고리에 ops-* 채널 8개 + 별도 `#ops-accounts` (재무 알림용). 채널 ID는 워크플로우 자격증명 등록 시 입력.
+
+| 채널 | 다루는 알림 |
+| --- | --- |
+| `#ops-orders` | 미배정 게스트 주문, 소급매칭 후보, 중복 의심, 주문 취소 요청, QR 추천, catastrophic 500 |
+| `#ops-onboarding` | 온보딩 폼 제출, 매직링크 분실 재발급, 신원 확정 실패, Xero ContactID 누락 |
+| `#ops-delivery` | dispatch 실패, 컷오프 미준수, 배송지 누락, 게스트 dispatch 시도(정책 위반) |
+| `#ops-accounts` | Xero 인보이스 발행 실패, GoCardless mandate 실패, 결제 실패, payment term 누락 |
+| `#ops-inventory` | 재고 부족 임박 (Make-to-stock 예측), safety stock 하향 알림 |
+| `#ops-production` | 생산 라인 지연, 생산 계획 vs 실적 갭 |
+| `#ops-qa` | 내부 QA 이슈 (라벨·바코드·중량 불일치 등) |
+| `#ops-complaints` | 고객 클레임 (품질·이물질·배송 손상 등) |
+
+> 채널 ID는 n8n 자격증명/`channel-map` Airtable 테이블에 보관 권장(코드 하드코딩 X). 채널 변경에 대응 쉬워짐.
 
 ---
 
 ## 예외 처리 (모두 Slack 알림 → 수동 조치)
 
-- **중복 주문 의심**: 같은 고객 + 같은 배송일 + 동일 sku 조합 (수량 무관) → Slack `#orders-watch` → admin 확인. 멱등키로 진짜 재제출은 1차 차단.
-- **게스트 소급 매칭** (상호+주소) → Slack → 영업 수동 매칭.
-- **주문 취소** → Slack → Xero 수동 조치.
+- **중복 주문 의심**: 같은 고객 + 같은 배송일 + 동일 sku 조합 (수량 무관) → Slack `#ops-orders` → admin 확인. 멱등키로 진짜 재제출은 1차 차단.
+- **게스트 소급 매칭** (상호+주소) → Slack `#ops-orders` → 영업 수동 매칭.
+- **주문 취소** → Slack `#ops-orders` → Xero 수동 조치.
   - dispatch 전 취소: 인보이스 아직 없음 → Airtable 상태만 "취소". Xero 조치 불필요.
-  - dispatch 후 취소/반품: 인보이스 발행됨 → 수동 **credit note**.
-- **QR 추천**: 링크 재요청 2회+ → Slack 알림 + Airtable 플래그.
+  - dispatch 후 취소/반품: 인보이스 발행됨 → 수동 **credit note** (`#ops-accounts` 병행 알림).
+- **QR 추천**: 링크 재요청 2회+ → Slack `#ops-orders` 알림 + Airtable 플래그.
 
 ---
 
@@ -215,5 +234,4 @@
 | 항목 | 메모 |
 | --- | --- |
 | 워크플로우 #3~#6 트리거·노드 설계 | #1·#2 완료. 다음 후보: #6(SMS) / #3(Xero→Airtable 결제 동기화) / #2.5(선결제·COD 인보이스) |
-| Xero Item Code 등록 | `../airtable/products.md` 빈 칸 — 3 SKU에 대해 Xero 측 매핑 필수 |
-| Slack 채널 분리 | `#orders-watch`(중복 의심)·`#orders-unassigned`(게스트 신규)·`#orders-alert`(에러)·`#orders-suspect-cancel`(취소)·`#orders-qr`(QR 추천) — 채널 ID 확정 필요 |
+| 각 ops-* 채널 ID 등록 | 채널은 만들어졌고 매핑 확정 — 워크플로우 구현 시점에 ID를 n8n 자격증명에 입력 |

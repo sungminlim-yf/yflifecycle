@@ -7,9 +7,12 @@ metadata:
   originSessionId: 1d30d126-8bcb-491b-b40d-e1e58d82e7aa
 ---
 
-설계 단계 v0.4 (2026-05-28 기준). 도메인별 폴더 + 각 폴더 CLAUDE.md 구조 (`onboarding/`, `order-site/`, `airtable/`, `xero/`, `n8n/`). 루트 `CLAUDE.md`가 라우터·대시보드 — 잠긴 결정·미결은 거기에 정리되어 있어 그쪽을 single source로 참조.
+설계 단계 v0.4+ (2026-05-28 갱신). 도메인별 폴더 + 각 폴더 CLAUDE.md 구조 (`onboarding/`, `order-site/`, `airtable/`, `xero/`, `n8n/`). 루트 `CLAUDE.md`가 라우터·대시보드 — 잠긴 결정·미결은 거기에 정리되어 있어 그쪽을 single source로 참조.
 
-설계 닫힌 영역: order-site UX, 가격/할인/배송비/DD, 온보딩 폼, n8n 워크플로우 #1·#2.
+설계 닫힌 영역: order-site UX, 가격/할인/배송비/DD, 온보딩 폼, n8n 워크플로우 #1·#2, **MOQ($150 grand subtotal), 배송비($5+GST, OUTPUT 10%), Xero Item Code(KAT/GAR/TER), Slack ops-* 매핑** (2026-05-28 추가 closure). `xero/` 도메인 미결 모두 해소.
+
+라벨 갱신 반영 완료: KARAAGE·TERIYAKI 박스 2.5kg→4kg, 박스 단가 $32.50→$52.00 ([[product-source-files]]).
+Xero 환경 확보: 회사 생성 + Custom Connection 키 ([[xero-account]]).
 
 다음 작업 후보 (사용자가 turn 시작 시 택일):
 - n8n 워크플로우 #6 (분실복구·주문확인 SMS — #1이 sub-workflow로 호출 중)
@@ -17,6 +20,6 @@ metadata:
 - n8n 워크플로우 #2.5 (선결제·COD 인보이스 발행)
 - `airtable/production-planning.md` 스텁 채우기 (Make-to-stock 생산·재고 예측)
 
-외부 확인 미결: 배송비 GST 회계사 확인 / Xero Item Code 3 SKU 등록 / Slack 채널 ID 확정.
+남은 운영 액션(설계 외): Xero에 Item 3개 실제 등록, n8n에 Custom Connection 키·ops-* 채널 ID 등록.
 
 진행 방식은 [[yf-conversation-style]] 참조.

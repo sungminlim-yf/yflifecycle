@@ -59,22 +59,28 @@ Airtable에서 넘어오는 line item subtotal은 **base 청구가**(박스 단�
 ### ② 배송비 — 2단계 무료선
 
 - **임계값 (할인 전 subtotal 기준)**:
-  - `subtotal < AUD 300` → **배송비 AUD 10**
+  - `subtotal < AUD 300` → **배송비 AUD 5 + GST** (인보이스 총 $5.50)
   - `subtotal ≥ AUD 300` → **배송비 무료**
 - **할인 전 subtotal**: Airtable 라인아이템 subtotal 합(박스 단가 × 수량). 그룹 할인 적용 **전** 금액 — 일반/내부고객 동일 기준이라 안내·화면 표시 일관 ("$300 주문 시 무료"가 둘 다 맞음).
 - **그룹 할인 미적용**: n8n이 배송비 라인 추가 시 **line discount % = 0**으로 명시 override. 배송비는 원가 회수 성격이라 5% 그룹 할인 대상 아님.
+- **GST 처리**: 배송비 라인 `TaxType = OUTPUT` (GST on Income 10%, **exclusive**). 인보이스 헤더 `LineAmountTypes = Exclusive`로 명시. 제품 라인은 변함없이 `EXEMPTOUTPUT`. (2026-05-28 확정)
 - **적용 시점**: n8n이 인보이스 생성 시 배송비 라인을 별도로 추가 (`../n8n/`). Xero 네이티브 자동화가 아님.
-- ⚠️ **배송비의 GST 취급**: 본 품목은 GST-free지만 배송비 자체의 세금은 별도 — 본품 공급의 부수 운임이면 GST-free, 그렇지 않으면 GST 10%. 회계사 확인 필요 (미결).
+
+### ③ MOQ — 오더 grand subtotal
+
+- **최소 주문 금액 = AUD 150** (할인 적용 **전** subtotal 기준). SKU별 MOQ는 없음.
+- 미달 시 **n8n #1이 서버 단에서 `422`로 거부** — Xero 인보이스 단계까지 오지 않음.
+- 사이트는 인라인으로 미달 안내(`../order-site/`).
 
 ### 최종 인보이스 금액 (한눈에)
 
 ```
-S = Σ(박스 단가 × 박스 수)              ← Airtable 라인아이템 subtotal (할인 전)
+S = Σ(박스 단가 × 박스 수)              ← Airtable 라인아이템 subtotal (할인 전, MOQ 150 검증 후)
 
 인보이스 금액
   = S
   − S × Xero Contact discount %         ← 내부 5% / 일반 0% (배송비엔 미적용)
-  + (S < $300 ? $10 : $0)               ← n8n이 배송비 라인 별도 추가
+  + (S < $300 ? $5.50 : $0)             ← 배송비 line ($5 + GST $0.50), n8n이 별도 추가
 ```
 
 ---
@@ -128,8 +134,25 @@ Xero는 SoT지만, 영업사원(주로 HubSpot)과 Admin팀(주로 Airtable)도 
 
 ---
 
+## Xero 환경 / 접근 (운영 인프라)
+
+- **Xero 회사**: `Young Foods Pty Ltd` 신규 생성 (2026-05-28). 본 시스템이 인보이스를 발행할 대상.
+- **인증 방식**: **Custom Connection App** 생성, client credentials 확보. n8n에서 OAuth2 client credentials grant로 직접 호출 가능 (single-tenant 전용, OAuth 사용자 대화 불필요).
+- 관리 화면: Xero developer portal의 Custom Connection App 페이지에서 scope·rotate 관리.
+- n8n 자격증명 등록은 `../n8n/`에서 다룸.
+
+---
+
 ## 미결 사항 (이 도메인)
 
-| 항목 | 선택지 / 메모 |
+설계 결정은 모두 끝남 (2026-05-28):
+- 배송비: $5 + GST exclusive (`OUTPUT` 10%)
+- 제품 라인: GST-free (`EXEMPTOUTPUT`)
+- Xero Item Code: `KAT`/`GAR`/`TER`
+- Xero 회사·Custom Connection 확보
+
+남은 운영 액션:
+| 항목 | 메모 |
 | --- | --- |
-| 배송비 GST 처리 | 본품 GST-free 부수 운임의 GST-free 여부 — 회계사 확인 후 Xero item config 확정 |
+| Xero에 Item 3개 실제 등록 | `KAT`(KATSU, $78, EXEMPTOUTPUT), `GAR`(KARAAGE, $52, EXEMPTOUTPUT), `TER`(TERIYAKI, $52, EXEMPTOUTPUT). 등록 후 n8n #2가 ItemCode 참조로 동작. |
+| Custom Connection client key 저장 | n8n 자격증명에 안전하게 등록 (구현 시점). |

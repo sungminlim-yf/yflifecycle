@@ -75,14 +75,16 @@
 - 제품/재고 기준값 SoT: **Airtable 제품 테이블**
 - forecast: **D+1 확정 주문 / D+2~14 historical 추정** (컷오프 = 배송 전날 12pm)
 - 예외(중복·소급매칭·취소): Slack 알림 → 수동 처리
-- **가격**: 모든 SKU **단일가 AUD 13/kg, GST-free**. 박스 단가는 박스 중량 환산 ($78 / $32.50 / $32.50).
+- **가격**: 모든 SKU **단일가 AUD 13/kg, GST-free**. 박스 단가는 박스 중량 환산 — KATSU $78 (6kg), KARAAGE $52 (4kg), TERIYAKI $52 (4kg). _포장단위 라벨 업데이트 반영 2026-05-28._
 - **주문 단위**: **박스** (라인아이템 수량 = 박스 수, 단가 = 박스 단가).
 - **고객 그룹 = 2개**: `내부고객` (가맹점·자매사, 5% 할인) / `일반고객` (0%). 차등은 **Xero Contact의 default discount %**로 자동 적용. 그룹은 Airtable 고객 테이블 single select.
-- **배송비**: 할인 전 subtotal `< $300 → $10`, `≥ $300 → 무료`. 배송비 라인엔 그룹 할인 미적용 (n8n이 line discount % = 0으로 override).
+- **배송비**: 할인 전 subtotal `< $300 → $5 + GST` (총 $5.50), `≥ $300 → 무료`. 배송비 라인엔 그룹 할인 미적용 (n8n이 line discount % = 0으로 override). 인보이스 line tax = `OUTPUT` (GST on Income 10%, exclusive). 제품 라인은 그대로 `EXEMPTOUTPUT` (GST Free Income). _GST exclusive 결정 2026-05-28._
+- **MOQ**: 오더 전체 grand subtotal **AUD 150** (그룹 할인 적용 **전**). SKU별 MOQ 없음. 미달 = 주문 거부 (n8n #1 서버 측 검증, `422`).
 - **주문 사이트 UX**: 인라인 확인 + 즉시 제출 (별도 검토 페이지 없음, 멱등키 필수) / 매직링크 진입 시 정보 전체 노출 / 선결제는 결제 전 배송지·메모만 셀프 수정 / QR 카운트는 재발송 요청만 / SMS = ClickSend.
 - **온보딩 폼**: **Tally** + GoCardless Billing Request Flow. 4단계에서 영업이 고객 그룹 지정 → Xero Contact default discount % 자동 입력.
 - **n8n 워크플로우 #1 (주문 제출 → Airtable)**: webhook 직행, 통합 endpoint(`mode` 분기), 서버 가격 산출, UUID v4 멱등키, 중복 의심 = 같은 배송일 + 동일 sku 조합. SMS는 sub-workflow fire-and-forget.
-- **n8n 워크플로우 #2 (dispatch → Xero 인보이스)**: DD/7-day 한정. Airtable 출하 상태 변경 트리거, 즉시 발행. 박스 단가 line + 조건부 배송비 line(`<$300=$10, DiscountRate=0 override`), tax=`EXEMPTOUTPUT`, Contact discount % 자동. Due date = 다음 화요일(DD)/+7일(7-day). PDF 자동 발송. 멱등은 `Xero 인보이스 ID` 필드 사전 체크 + reference로 부분실패 복구. 선결제·COD는 #2.5 별도.
+- **n8n 워크플로우 #2 (dispatch → Xero 인보이스)**: DD/7-day 한정. Airtable 출하 상태 변경 트리거, 즉시 발행. 박스 단가 line(tax=`EXEMPTOUTPUT`) + 조건부 배송비 line(`<$300 → UnitAmount=5, tax=OUTPUT, DiscountRate=0 override` → 총 $5.50). 인보이스 `LineAmountTypes=Exclusive`. Xero Item Code = `KAT`/`GAR`/`TER`. Contact discount % 자동(내부 5%/일반 0%, 배송비 제외). Due date = 다음 화요일(DD)/+7일(7-day). PDF 자동 발송. 멱등은 `Xero 인보이스 ID` 필드 사전 체크 + reference로 부분실패 복구. 선결제·COD는 #2.5 별도.
+- **Xero 회사**: `Young Foods Pty Ltd` 신규 생성. **Custom Connection App** 생성·client key 보유 → n8n OAuth2 client credentials로 직접 호출 가능 (2026-05-28).
 
 ---
 
@@ -90,13 +92,10 @@
 
 | 항목                                              | 소유 폴더    |
 | ------------------------------------------------- | ------------ |
-| 배송비 GST 취급 (회계사 확인)                     | `xero/`      |
 | 생산·재고 예측 모듈 상세 (production-planning.md) | `airtable/`  |
 | 워크플로우 #3~#6 + #2.5 트리거·노드 설계           | `n8n/`       |
-| Slack 채널 ID 확정 (orders-watch/-unassigned 등)  | `n8n/`       |
-| Xero Item Code 3 SKU 등록                          | `airtable/`  |
 
-> `onboarding/` · `order-site/` 도메인 미결은 모두 해소 — 각 폴더 "확정된 결정" 섹션 참조.
+> `onboarding/` · `order-site/` · `xero/` 도메인 미결은 모두 해소 — 각 폴더 "확정된 결정" 섹션 참조.
 
 ---
 
