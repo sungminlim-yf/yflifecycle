@@ -9,16 +9,17 @@
 
 ## 품목 목록 (냉동 제품 3종)
 
-| SKU (= 바코드)       | 약칭     | 품목명                      | 단위(박스 순중량) | 박스당 수량            | 단가(ex-GST) | MOQ | Xero Item Code |
-| -------------------- | -------- | --------------------------- | ----------------- | ---------------------- | ------------ | --- | -------------- |
-| `KATSNCP1P2MKBRBKV1` | KATSU    | Golden Panko Chicken Cutlet | 6kg / 박스        | 약 30조각 (개당 ~200g) |              |     |                |
-| `GARSNCP1P2MGTHBKV1` | KARAAGE  | Crispy Chicken Bites        | 2.5kg / 박스      | — (25 servings)        |              |     |                |
-| `TERSNCP300MTTHBKV1` | TERIYAKI | Pre-Cooked Chicken Thigh    | 2.5kg / 박스      | — (25 servings)        |              |     |                |
+| SKU (= 바코드)       | 약칭     | 품목명                      | 단위(박스 순중량) | 박스당 수량            | 박스 단가 (AUD) | MOQ | Xero Item Code |
+| -------------------- | -------- | --------------------------- | ----------------- | ---------------------- | --------------- | --- | -------------- |
+| `KATSNCP1P2MKBRBKV1` | KATSU    | Golden Panko Chicken Cutlet | 6kg / 박스        | 약 30조각 (개당 ~200g) | $78.00          |     |                |
+| `GARSNCP1P2MGTHBKV1` | KARAAGE  | Crispy Chicken Bites        | 2.5kg / 박스      | — (25 servings)        | $32.50          |     |                |
+| `TERSNCP300MTTHBKV1` | TERIYAKI | Pre-Cooked Chicken Thigh    | 2.5kg / 박스      | — (25 servings)        | $32.50          |     |                |
 
 > **SKU = 바코드 전체 문자열**(회사 공식 SKU). 약칭은 화면 표시·대화용 별칭일 뿐 키 아님.
 > **SKU 3종 모두 공식 바코드 PDF로 글자 단위 검증 완료** (2026-05-27).
 > 출처: Dropbox `…/20. Recipe SKU Label/01. Recipe Label SKU/` 의 라벨 이미지(`1/2/3.png`) + 바코드 PDF(`SKU KATSU/KARAAGE/TERI BARCODE.pdf`, Code 128).
-> 남은 칸: **단가 · MOQ · Xero Item Code** (라벨에 없음 — 별도 입력 필요).
+> **단가**: 모든 SKU 통일 **AUD 13 / kg** (GST-free, 호주 기본식품). 박스 단가 = 13 × 박스 중량.
+> 남은 칸: **MOQ · Xero Item Code** (라벨에 없음 — 별도 입력 필요).
 
 ---
 
@@ -89,7 +90,9 @@
 
 ## 가격 관련 메모
 
-- 인보이스 금액 산출: 오더 → Xero 인보이스 생성 시 **단가는 Airtable 제품 테이블 값**을 line item에 실어 보냄.
-- 고객별 차등가가 있는가? (있다면 별도 가격 테이블/필드 설계 필요) — **미정, 채워주세요**
-- 가격 표기는 GST 포함인가 별도인가? — **미정, 채워주세요**
-- 단가·MOQ·Xero Item Code는 라벨에 없는 정보 → 영업/재무 기준으로 별도 입력 필요.
+- **통일가**: 모든 SKU **AUD 13 / kg**. 박스 단가는 박스 중량으로 환산.
+- **GST**: 호주 기본 식품 → **GST-free**. Xero 인보이스 line tax rate = `GST Free Income`.
+- **고객 그룹별 차등은 "단가"가 아니라 "할인"으로 표현**: 단가는 단일, 차등은 Xero **Contact의 default discount %** 필드로 자동 적용 — 내부고객 5%, 일반고객 0%. 상세 `../xero/`.
+- **배송비**: 주문 금액에 따라 $0~$10 차등 — 임계값 미정. 적용은 인보이스 생성 시 (n8n).
+- **인보이스 금액 산출 흐름**: Airtable 라인아이템 subtotal(박스 단가 × 박스 수) → Xero에 line item으로 전달 → Xero가 Contact default discount % 자동 적용 → n8n이 배송비 라인 추가.
+- MOQ · Xero Item Code는 라벨에 없는 정보 → 영업/재무 기준으로 별도 입력 필요.

@@ -39,8 +39,8 @@
 
 1. 게스트 주문 → Airtable 미배정 + payment term 없음으로 저장 → **Slack 알림**
 2. 영업에게 알림 → 영업이 연락
-3. 온보딩 폼 발송 (payment term 선택 + DD면 GoCardless mandate 포함)
-4. 고객 작성·승인 → HubSpot 신규 고객 생성, 고객 ID 발급, Xero ContactID 발급, payment term 확정
+3. 온보딩 폼 발송 (Tally 링크 — payment term 선택 + DD면 GoCardless mandate 포함)
+4. 고객 작성·승인 → **영업이 고객 그룹 지정(`내부고객`/`일반고객`)** → HubSpot 신규 고객 생성, 고객 ID 발급, Xero ContactID 발급(default discount % = 그룹 기반 5%/0% 자동 입력), payment term 확정
 5. **미배정 주문 소급 매칭**: 상호 + 배송주소로 **수동 매칭** (Slack 알림으로 처리) → 고객 레코드 연결
 6. 고유 매직 링크(토큰) 발급 → 다음부터 정문 A 진입
 
@@ -61,14 +61,18 @@
 
 ---
 
-## 온보딩 폼 + GoCardless 연결 (설계 진행 중)
+## 온보딩 폼 + GoCardless 연결
 
-- 온보딩 폼에서 받는 것: 상호·담당자·연락처·기본 배송지·payment term 선택
-- DD 선택 시: **GoCardless Billing Request Flow**로 연결해 BECS DDR mandate 1회 동의
+- **플랫폼 = Tally** (MCP 이미 연결 → 폼 자동 생성·관리 가능). 무료/저렴, conditional logic 강력 (payment term 선택에 따라 DD mandate 단계 노출 등). custom CSS로 브랜딩.
+- **온보딩 폼에서 받는 것**: 상호·담당자·연락처·기본 배송지·payment term 선택. *고객 그룹은 폼에 노출하지 않고 영업이 승인 단계에서 지정 — 가맹점·자매사 식별은 영업 판단 영역.*
+- DD 선택 시: 폼 끝에서 **GoCardless Billing Request Flow**로 redirect → BECS DDR mandate 1회 동의
 - mandate 동의 후 → 이후 수금은 Xero–GoCardless 네이티브 자동 (상세 `../xero/`)
+- HubSpot/Xero/Airtable 매핑은 Tally → n8n webhook → 각 시스템에 propagate (상세 `../n8n/`)
 
-### 미결 사항 (이 도메인)
+---
 
-| 항목 | 선택지 / 메모 |
-| --- | --- |
-| 온보딩 폼 플랫폼 | HubSpot Forms vs Tally vs 별도. GoCardless는 Billing Request Flow로 연결 |
+## 확정된 결정 (이 도메인)
+
+- 토큰: 영구 + 신고 시 폐기·재발급 (정책은 본 폴더, 분실 UX는 `../order-site/`)
+- 온보딩 폼: **Tally** + GoCardless Billing Request Flow
+- 4단계에 **고객 그룹 지정**(영업 판단) + **Xero default discount % 자동 입력**(그룹 기반) 포함

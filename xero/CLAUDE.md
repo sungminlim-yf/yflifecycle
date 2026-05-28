@@ -23,19 +23,59 @@
 
 | 고객 유형 | 인보이스 발행 시점 | 수금 방식 |
 | --- | --- | --- |
-| **GoCardless DD** | **dispatch 시** | 인보이스 due date를 주간 수금 요일로 맞춰 Xero–GoCardless 네이티브 자동 수금 |
+| **GoCardless DD** | **dispatch 시** | 인보이스 due date = **매주 화요일**, Xero–GoCardless 네이티브 자동 수금 |
 | **7-day credit** | **dispatch 시** | 고객이 직접 결제 (7일 신용) |
 | **선결제 / COD** | **dispatch 전** | 결제 확인 후 출하 (Hold) |
 
-- **오더 1개 = Xero 인보이스 1개** (1:1). DD 고객은 인보이스들이 주중 쌓였다가 수금 요일에 자동 수금.
+- **오더 1개 = Xero 인보이스 1개** (1:1). DD 고객은 한 주간 발생한 인보이스들이 그 주 화요일에 묶여 자동 수금. 정산은 BECS 리드타임(2~3 영업일) 후 통장 입금.
 - DD 수금은 **due date 기준 자동** → 파일 업로드/수동 입력 불필요. mandate(BECS DDR)는 **온보딩 시 1회 동의** (`../onboarding/`).
-- **주의(BECS)**: DD는 제출 후 약 2~3 영업일 뒤 정산. 수금 요일 직전 발행 인보이스는 다음 사이클로 밀릴 수 있음 → 수금 요일은 이 리드타임 감안.
+- **due date 산정 규칙(운영 룰)**: dispatch 시점에 인보이스 due date를 "**다음 화요일**"로 자동 설정. 단 BECS 사전 통지 리드타임 때문에 **월·화요일 dispatch 인보이스는 그 주가 아니라 다음 주 화요일로 밀어 설정** (당일·익일 collection 불가). n8n 워크플로우가 이 규칙으로 due date를 자동 계산.
 
 ### 선결제/COD 고객 (dispatch 전 결제)
 
 - 출하 상태 = **Hold** → 결제 확인 후 출하
 - 결제 경로 ①: 직접 계좌이체 → 입금 확인 후 Xero 인보이스 Paid 처리
 - 결제 경로 ②: Xero 인보이스 "Pay now" 링크 → 온라인 결제 → 자동 Paid (운영 권장)
+
+---
+
+## 가격·할인·배송비 (Xero 인보이스 가산·감산)
+
+Airtable에서 넘어오는 line item subtotal은 **base 청구가**(박스 단가 × 수량 합). Xero 인보이스 생성 시 두 가지 조정이 들어간다.
+
+### 가격 자체는 통일가 (GST-free)
+
+- 모든 SKU 단일가 **AUD 13 / kg** (박스 단가 = 13 × 박스 kg). SoT는 Airtable 제품 테이블 → `../airtable/products.md`.
+- **GST-free** (호주 기본식품) — Xero 인보이스 line tax rate = `GST Free Income`.
+- 차등가는 "단가"가 아니라 "할인"으로 표현 → 아래 ①.
+
+### ① 고객 그룹별 할인 — Xero Contact default discount %
+
+- **고객 그룹** (Airtable 고객 테이블, 2개): `내부고객`(가맹점·자매사, 로열티 납부) / `일반고객`(그 외)
+- **적용 방식**: 각 Xero Contact의 **default discount %** 필드에 그룹 값을 저장 — 내부고객 = **5%**, 일반고객 = **0%**. Xero가 인보이스 발행 시 모든 line에 자동 적용.
+- **세팅 시점**: 신규 고객 승격 시 Xero Contact 생성 단계에서 그룹에 맞춰 입력 (`../onboarding/`, `../n8n/`).
+- 그룹 변경 시: Airtable 그룹 필드 + Xero default discount %를 동기로 갱신해야 함 (n8n 책임).
+
+### ② 배송비 — 2단계 무료선
+
+- **임계값 (할인 전 subtotal 기준)**:
+  - `subtotal < AUD 300` → **배송비 AUD 10**
+  - `subtotal ≥ AUD 300` → **배송비 무료**
+- **할인 전 subtotal**: Airtable 라인아이템 subtotal 합(박스 단가 × 수량). 그룹 할인 적용 **전** 금액 — 일반/내부고객 동일 기준이라 안내·화면 표시 일관 ("$300 주문 시 무료"가 둘 다 맞음).
+- **그룹 할인 미적용**: n8n이 배송비 라인 추가 시 **line discount % = 0**으로 명시 override. 배송비는 원가 회수 성격이라 5% 그룹 할인 대상 아님.
+- **적용 시점**: n8n이 인보이스 생성 시 배송비 라인을 별도로 추가 (`../n8n/`). Xero 네이티브 자동화가 아님.
+- ⚠️ **배송비의 GST 취급**: 본 품목은 GST-free지만 배송비 자체의 세금은 별도 — 본품 공급의 부수 운임이면 GST-free, 그렇지 않으면 GST 10%. 회계사 확인 필요 (미결).
+
+### 최종 인보이스 금액 (한눈에)
+
+```
+S = Σ(박스 단가 × 박스 수)              ← Airtable 라인아이템 subtotal (할인 전)
+
+인보이스 금액
+  = S
+  − S × Xero Contact discount %         ← 내부 5% / 일반 0% (배송비엔 미적용)
+  + (S < $300 ? $10 : $0)               ← n8n이 배송비 라인 별도 추가
+```
 
 ---
 
@@ -92,5 +132,4 @@ Xero는 SoT지만, 영업사원(주로 HubSpot)과 Admin팀(주로 Airtable)도 
 
 | 항목 | 선택지 / 메모 |
 | --- | --- |
-| 고객별 차등가 / GST 표기 | `../airtable/products.md` 참조 — 단일가 vs 고객별가, GST 포함/별도 |
-| DD 주간 수금 요일 | BECS 리드타임(2~3영업일) 감안해 확정 |
+| 배송비 GST 처리 | 본품 GST-free 부수 운임의 GST-free 여부 — 회계사 확인 후 Xero item config 확정 |

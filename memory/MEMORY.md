@@ -7,3 +7,5 @@
 
 - [MCP 서버 구성](mcp-setup.md) — Slack·HubSpot·n8n 연결됨, Tally·Airtable 브라우저인증 대기, Xero 미설치. 모두 local scope라 새 PC에선 재설치 필요
 - [제품 원본 파일 위치](product-source-files.md) — 라벨·바코드·레시피 원본은 Dropbox `…/01. Recipe Label SKU/`. products.md는 이 파일들로 채운 스냅샷
+- [설계 진행도](yf-design-progress.md) — v0.4 phase 포인터: 가격·결제·UX·온보딩·n8n #1·#2 닫힘 / 다음 후보 #6·#3·#2.5·production-planning
+- [대화 진행 스타일](yf-conversation-style.md) — 미결 1~2개씩 점진 진행, default 권장 잘 채택, 큰 묶음마다 명시 commit 요청

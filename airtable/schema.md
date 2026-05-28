@@ -45,15 +45,17 @@
 ## 라인아이템 테이블
 
 - 오더(1) ──< 라인아이템(*) 구조. picking(피킹 리스트)·Xero 인보이스 line 매핑에 사용.
-- 필드: 오더(link), 제품(link → 제품 테이블), 수량, 단가(제품 테이블 lookup)
+- 필드: 오더(link), 제품(link → 제품 테이블), **수량(박스 수)**, **단가(박스 단가, 제품 lookup)**, **subtotal(formula = 박스 단가 × 수량)**
+- 주문 단위는 **박스**. kg는 제품 테이블의 기준값(box 중량 × kg 단가)에서 derived.
 
 ---
 
 ## 제품 테이블 (SoT)
 
-- SKU / 품목명 / 단위 / 박스당 수량 / 단가 / MOQ / Xero Item Code
+- SKU / 품목명 / 단위 / **박스당 수량 (kg)** / **kg 단가 (현재 통일 $13)** / **박스 단가 (formula = kg 단가 × 박스 kg)** / MOQ / Xero Item Code
 - **Target stock / Safety stock** (생산·예측 모듈이 lookup으로 사용 → `production-planning.md`)
 - 사람용 스냅샷: `products.md`
+- 가격 규칙·할인·GST 상세는 `../xero/`. 단가는 단일·할인은 Xero Contact 단계에서 적용.
 
 ---
 
@@ -61,6 +63,7 @@
 
 - **HubSpot 고객 ID + Xero ContactID + 매직/복구 토큰** (매핑 허브 키)
 - 상호 / 담당자 / 이메일 / 연락처 / 기본 배송지 / payment term
+- **고객 그룹 (single select): `내부고객` / `일반고객`** — Xero Contact의 default discount % 결정 (내부 5% / 일반 0%). 그룹 변경 시 n8n이 Xero 동기 갱신.
 - 고객 Hold (Xero에서 동기화: credit limit 초과·outstanding 문제) + hold reason
 - 링크 재요청 횟수 (QR 스티커 트리거용)
 - QR 스티커 추천 플래그 / 발급 여부
