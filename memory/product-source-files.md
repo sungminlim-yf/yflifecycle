@@ -17,6 +17,7 @@ Young Foods 냉동 제품 3종의 공식 라벨·바코드·레시피 원본 파
 
 이력
 - 2026-05-27: 라벨 이미지·바코드 PDF로 `products.md` 초기 작성 (바코드 글자 단위 검증).
-- 2026-05-28: `Label 28 05 2026.pdf`로 갱신. **KARAAGE·TERIYAKI 박스 중량 2.5kg → 4kg, 박스 단가 $32.50 → $52.00.** KATSU 영양정보 미세 수정(Sodium 400→550, Energy 750→760 kJ, Carb/Sugars 소폭), KATSU ingredients의 첨가물 표기 정정(Flavour enhancer 621/635 + Raising agents 450/500), TERIYAKI ingredients에 Maltodextrin 추가·Thickener(415) 제거.
+- 2026-05-28 (오전): `Label 28 05 2026.pdf`로 갱신. **KARAAGE·TERIYAKI 라벨(=bag) 중량 2.5kg → 4kg, 박스 단가 $32.50 → $52.00.** KATSU 영양정보 미세 수정(Sodium 400→550, Energy 750→760 kJ, Carb/Sugars 소폭), KATSU ingredients의 첨가물 표기 정정(Flavour enhancer 621/635 + Raising agents 450/500), TERIYAKI ingredients에 Maltodextrin 추가·Thickener(415) 제거.
+- 2026-05-28 (오후): **박스 단위 = 2 bag 확정**. KARAAGE·TERIYAKI는 **1 box = 2 × 4kg bag = 8kg**, 박스 단가 $52 → **$104**로 재정정. 라벨의 4kg은 bag 단위이며 박스에 2 bag이 들어감. KATSU는 6kg/박스 = 1 bag 그대로.
 
 아직 비어 있는 칸(MOQ · Xero Item Code)은 라벨에 없는 정보 → 영업/재무 소스에서 별도 입력 필요.

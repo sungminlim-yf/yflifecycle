@@ -12,13 +12,14 @@
 | SKU (= 바코드)       | 약칭     | 품목명                      | 단위(박스 순중량) | 박스당 수량            | 박스 단가 (AUD) | Xero Item Code |
 | -------------------- | -------- | --------------------------- | ----------------- | ---------------------- | --------------- | -------------- |
 | `KATSNCP1P2MKBRBKV1` | KATSU    | Golden Panko Chicken Cutlet | 6kg / 박스        | 30조각 (개당 약 200g)  | $78.00          | `KAT`          |
-| `GARSNCP1P2MGTHBKV1` | KARAAGE  | Crispy Chicken Bites        | 4kg / 박스        | — (25 servings)        | $52.00          | `GAR`          |
-| `TERSNCP300MTTHBKV1` | TERIYAKI | Pre-Cooked Chicken Thigh    | 4kg / 박스        | — (25 servings)        | $52.00          | `TER`          |
+| `GARSNCP1P2MGTHBKV1` | KARAAGE  | Crispy Chicken Bites        | 8kg / 박스 (2 × 4kg bag) | 50 servings (2 × 25)   | $104.00         | `GAR`          |
+| `TERSNCP300MTTHBKV1` | TERIYAKI | Pre-Cooked Chicken Thigh    | 8kg / 박스 (2 × 4kg bag) | 50 servings (2 × 25)   | $104.00         | `TER`          |
 
 > **SKU = 바코드 전체 문자열**(회사 공식 SKU). 약칭은 화면 표시·대화용 별칭일 뿐 키 아님.
 > **Xero Item Code = SKU 바코드 앞 3자**. 짧고 인보이스 라인에서 한눈에 보이며, 박스 사이즈가 바뀌어도 코드는 안정. 무게·박스 단가는 Xero **Item description / Sales price** 필드로 관리. (2026-05-28 확정)
 > **SKU 3종 모두 공식 바코드 PDF로 글자 단위 검증 완료** (2026-05-27).
-> **포장단위 업데이트 라벨 반영 완료** (2026-05-28): KARAAGE·TERIYAKI 박스 중량이 2.5kg → 4kg으로 커지면서 박스 단가도 $32.50 → $52.00로 갱신. KATSU는 변동 없음.
+> **포장단위 업데이트 라벨 반영 완료** (2026-05-28 오전): KARAAGE·TERIYAKI 라벨(=1 bag) 무게 2.5kg → 4kg로 갱신.
+> **박스 단위 = 2 bag 확정** (2026-05-28 오후): KARAAGE·TERIYAKI는 **1 box = 2 × 4kg bag = 8kg**, 박스 단가 $52 → **$104**. (4kg은 bag 라벨, box는 항상 2 bags) KATSU는 변동 없음 (6kg/박스 = 1 bag).
 > 출처: Dropbox `…/20. Recipe SKU Label/01. Recipe Label SKU/Label 28 05 2026.pdf` (현행) + 바코드 PDF (`SKU KATSU/KARAAGE/TERI BARCODE.pdf`, Code 128).
 > **단가**: 모든 SKU 통일 **AUD 13 / kg** (GST-free, 호주 기본식품). 박스 단가 = 13 × 박스 중량.
 > **MOQ**: SKU별이 아니라 **오더 전체 grand subtotal 기준 AUD 150** (그룹 할인 적용 **전**). 검증은 n8n #1이 수행 — 미달 시 `422`.
@@ -41,7 +42,7 @@
 ### 2. KARAAGE — Crispy Chicken Bites `GARSNCP1P2MGTHBKV1`
 
 - **부제**: Karaage-Style Seasoned & Coated Chicken Pieces
-- **순중량 / 박스당**: 4kg (25 servings)
+- **순중량 / 박스당**: 8kg (2 × 4kg bag, 50 servings)
 - **보관**: 냉동 -18°C 이하
 - **유통기한(Best Before)**: 생산일로부터 6개월 (-18°C 이하 보관 시)
 - **조리 상태**: 반조리(partially cooked) — 조리 후 섭취
@@ -52,7 +53,7 @@
 ### 3. TERIYAKI — Pre-Cooked Chicken Thigh `TERSNCP300MTTHBKV1`
 
 - **부제**: Lightly Coated — Ideal for Stir-fry, Sauces & Teriyaki
-- **순중량 / 박스당**: 4kg (25 servings)
+- **순중량 / 박스당**: 8kg (2 × 4kg bag, 50 servings)
 - **보관**: 냉동 -18°C 이하
 - **유통기한(Best Before)**: 생산일로부터 6개월 (-18°C 이하 보관 시)
 - **조리 상태**: 반조리(partially cooked) — 바로 먹을 수 없음, 가열 후 섭취

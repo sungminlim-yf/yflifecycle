@@ -75,7 +75,7 @@
 - 제품/재고 기준값 SoT: **Airtable 제품 테이블**
 - forecast: **D+1 확정 주문 / D+2~14 historical 추정** (컷오프 = 배송 전날 12pm)
 - 예외(중복·소급매칭·취소): Slack 알림 → 수동 처리
-- **가격**: 모든 SKU **단일가 AUD 13/kg, GST-free**. 박스 단가는 박스 중량 환산 — KATSU $78 (6kg), KARAAGE $52 (4kg), TERIYAKI $52 (4kg). _포장단위 라벨 업데이트 반영 2026-05-28._
+- **가격**: 모든 SKU **단일가 AUD 13/kg, GST-free**. 박스 단가는 박스 중량 환산 — KATSU $78 (6kg/박스), KARAAGE $104 (8kg/박스 = 2 × 4kg bag), TERIYAKI $104 (8kg/박스 = 2 × 4kg bag). _박스 단위 = 2 bag 확정 2026-05-28._
 - **주문 단위**: **박스** (라인아이템 수량 = 박스 수, 단가 = 박스 단가).
 - **고객 그룹 = 2개**: `내부고객` (가맹점·자매사, 5% 할인) / `일반고객` (0%). 차등은 **Xero Contact의 default discount %**로 자동 적용. 그룹은 Airtable 고객 테이블 single select.
 - **배송비**: 할인 전 subtotal `< $300 → $5 + GST` (총 $5.50), `≥ $300 → 무료`. 배송비 라인엔 그룹 할인 미적용 (n8n이 line discount % = 0으로 override). 인보이스 line tax = `OUTPUT` (GST on Income 10%, exclusive). 제품 라인은 그대로 `EXEMPTOUTPUT` (GST Free Income). _GST exclusive 결정 2026-05-28._
@@ -92,8 +92,8 @@
 
 | 항목                                              | 소유 폴더    |
 | ------------------------------------------------- | ------------ |
-| 생산·재고 예측 모듈 상세 (production-planning.md) | `airtable/`  |
 | 워크플로우 #3~#6 + #2.5 트리거·노드 설계           | `n8n/`       |
+| Target/Safety/default_dispatch 초기값 (3 SKU × 3 = 9개) | `airtable/` (영업·생산 협의) |
 
 > `onboarding/` · `order-site/` · `xero/` 도메인 미결은 모두 해소 — 각 폴더 "확정된 결정" 섹션 참조.
 
@@ -102,7 +102,6 @@
 ## 다음 대화에서 이어갈 내용
 
 1. 남은 미결 사항 확정 (위 표 — 각 폴더에서)
-2. `airtable/production-planning.md` 작성 — 재고·생산 예측 모듈 상세
-3. 온보딩 폼 상세 설계 (+ GoCardless Billing Request Flow 연결) → `onboarding/`
-4. n8n 워크플로우 설계 (6개 핵심 워크플로우) → `n8n/`
-5. 개발 요구사항 명세로 전환
+2. n8n 워크플로우 #3~#6 + #2.5 설계 → `n8n/`
+3. Target/Safety/default_dispatch 초기값 입력 (영업·생산 협의 후)
+4. 개발 요구사항 명세로 전환

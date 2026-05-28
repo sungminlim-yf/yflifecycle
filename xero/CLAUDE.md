@@ -136,10 +136,29 @@ Xero는 SoT지만, 영업사원(주로 HubSpot)과 Admin팀(주로 Airtable)도 
 
 ## Xero 환경 / 접근 (운영 인프라)
 
-- **Xero 회사**: `Young Foods Pty Ltd` 신규 생성 (2026-05-28). 본 시스템이 인보이스를 발행할 대상.
-- **인증 방식**: **Custom Connection App** 생성, client credentials 확보. n8n에서 OAuth2 client credentials grant로 직접 호출 가능 (single-tenant 전용, OAuth 사용자 대화 불필요).
-- 관리 화면: Xero developer portal의 Custom Connection App 페이지에서 scope·rotate 관리.
-- n8n 자격증명 등록은 `../n8n/`에서 다룸.
+- **Xero 회사**: `Young Foods Pty Ltd` 신규 생성 (2026-05-28). 본 시스템이 인보이스를 발행할 대상. 홈페이지 URL `https://go.xero.com/app/!0Y7V2/homepage`.
+- **App name**: `claude-yflifecycle-v1` (Xero Custom Connection — 호출 주체).
+- **공개 식별자** (이 문서·메모리에 안전하게 적어둘 수 있음):
+  - Client ID: `3FD69845F1DA47A1A91B2A7D28D33EF2`
+  - Tenant ID: `7888f054-c786-4c65-809e-4d5db2c01d4c` (API 헤더 `Xero-tenant-id`에 박음)
+- **Client Secret**: **비밀번호 매니저 한 곳에만 보관**. 채팅·파일·메모리·git 평문 금지. 1차 secret은 평문 전송돼 2026-05-28에 **rotate 완료**.
+- **Scopes**: 현재 "전체" 부여. 우리 워크플로우 실사용은 `accounting.contacts` + `accounting.transactions` + `accounting.settings` 3개로 충분 — 운영 안정화 후 최소 권한으로 좁히기 권장.
+- **인증 방식**: OAuth2 **client credentials grant**.
+  - 토큰 발급: `POST https://identity.xero.com/connect/token` (body: `grant_type=client_credentials&scope=…`, basic auth: `client_id:client_secret`).
+  - access_token TTL 30분. refresh_token 없음(client credentials 특성) — 만료 시 재발급.
+  - API 호출 시 헤더: `Authorization: Bearer <access_token>` + `Xero-tenant-id: <tenant_id>` + `Accept: application/json`.
+
+### n8n credential 등록 가이드
+
+- credential 이름(권장): `xero-custom-connection`.
+- 등록할 값: `client_id` (위 공개값) + `client_secret` (비밀번호 매니저에서 직접 복붙) + `tenant_id` (위 공개값) + scope 문자열.
+- n8n credential vault는 암호화 저장됨. 워크플로우 노드에서 이 이름으로만 참조 — 노드 정의에 secret 직접 박지 말 것.
+- 토큰 캐싱: n8n HTTP Request 노드의 "OAuth2 (Client Credentials)" 인증 옵션을 쓰면 token 자동 refresh. 자체 캐싱 로직 불필요.
+
+### MCP 설치
+
+- **현재 미설치**. 운영 호출은 n8n이 직접 REST로 — MCP는 디버깅·조회 용도라 운영 흐름에 영향 없음.
+- 도입 검토 시점: 운영 시작 후 디버깅 빈도가 늘면 (인보이스 fail 원인 조회·Items 상태 확인 등). 그땐 별도 OAuth user 인증이 추가됨.
 
 ---
 
@@ -150,9 +169,9 @@ Xero는 SoT지만, 영업사원(주로 HubSpot)과 Admin팀(주로 Airtable)도 
 - 제품 라인: GST-free (`EXEMPTOUTPUT`)
 - Xero Item Code: `KAT`/`GAR`/`TER`
 - Xero 회사·Custom Connection 확보
+- **Xero Item 3개 등록 완료** (2026-05-28): `KAT` $78 / `GAR` $104 / `TER` $104, taxType `EXEMPTOUTPUT`, sales account `200` (Sales). 박스 단위가 GAR/TER 모두 2 bag = 8kg임을 반영.
 
 남은 운영 액션:
 | 항목 | 메모 |
 | --- | --- |
-| Xero에 Item 3개 실제 등록 | `KAT`(KATSU, $78, EXEMPTOUTPUT), `GAR`(KARAAGE, $52, EXEMPTOUTPUT), `TER`(TERIYAKI, $52, EXEMPTOUTPUT). 등록 후 n8n #2가 ItemCode 참조로 동작. |
 | Custom Connection client key 저장 | n8n 자격증명에 안전하게 등록 (구현 시점). |
