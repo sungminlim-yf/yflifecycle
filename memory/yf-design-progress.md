@@ -45,21 +45,38 @@ Xero 환경 확보 + Item 3개 등록 완료 ($78/$104/$104, EXEMPTOUTPUT) ([[xe
 - Airtable UI 마무리 작업 (lookup convert·single link convert) — [[airtable-base]] 참조
 - 본격 n8n 워크플로우 빌드 시작 (#1부터)
 
-## 내일 회사에서 시작 시 추천 순서
+## 다음 픽업 시 추천 순서 (집/맥북, 2026-05-29 저녁)
 
-1. **메모리 + 진행상황 확인** — [[airtable-base]] (테이블ID·UI 잔여작업) + 이 파일 (운영 액션 진행 현황) 빠르게 훑기
-2. **ClickSend 가입부터** (승인 lag 때문에 가장 일찍) — 30분 안에 끝남, 그 다음 1~2일 기다리는 동안 다른 거 진행
-3. 그 다음 옵션 — Claude가 할 수 있는 것:
-   - schema.md/CLAUDE.md에 **실제 tableId 박기** (운영 디버깅·n8n 빌드 정확도 ↑)
-   - **제품 3 SKU 행 입력** (KAT/GAR/TER + 박스 단가·MOQ·Xero Item Code) — Airtable MCP로 가능
-   - **n8n #1 빌드 시작** (외부 의존 적음)
-4. 사용자 손 작업 — 3·6 (HubSpot workflow, Xero Branding theme), Tally 폼 셋업
+1. **컴퓨터 픽업** — 회사 Windows에서 commit·push 완료 (마지막 commit `9b448ab`). 집 맥북에서 `cd yflifecycle && git pull`. 정션 이미 살아있으면 setup-memory-link.ps1 skip.
+2. **#0 활성화 전 확인사항 (가장 먼저)** — n8n UI에서 워크플로우 id `lNABcJuKPABoqQf0` 열어 review:
+   - **HubSpot Private App scope 확인 필수** — credential 이름이 "HubSpot Private App (companies read)"라 read만 있을 가능성 큼. **Company PATCH (magic_token 갱신) 실패하면 scope `crm.objects.companies.write` 추가 필요**. HubSpot Settings → Integrations → Private Apps → 해당 App → Scopes → CRM → Companies → Write 체크 → 토큰은 그대로 (값은 안 바뀜).
+   - **테스트 방법**: n8n UI에서 "Execute Workflow" 수동 실행 (Schedule 안 켜고도 수동 가능). 최근 10분 내 신규 Company 0건이면 0 처리 (정상). HubSpot에서 테스트 Company 1건 만들고 다시 수동 실행 → 6 노드 다 통과하는지, Airtable에 행 생기는지, HubSpot magic_token property에 값 박히는지 확인.
+   - **기존 Company bootstrap**: createdate filter 기반이라 #0 활성화 이전에 생성된 HubSpot Company는 처리 안 됨. 필요시 임시로 Search 노드의 filter value를 `Date.now() - 30 * 24 * 60 * 60 * 1000` (30일 전) 같이 확장 → 수동 fire → 다시 10min lookback으로 복원.
+   - 테스트 OK → workflow Activate 토글 ON → 5분 cron 시작
+3. **그 다음 작업 후보** (Claude 진행 가능):
+   - **#7a 빌드** (Tally webhook → HubSpot 매칭 → Airtable staging) — 큼, Tally 폼 먼저 있어야 의미. 폼 없으면 Tally MCP로 만들기부터.
+   - **#7b 빌드** (Airtable Onboarding Submissions.status=approved → Xero Contact + Airtable update + 기존 hold 오더 release + 환영 이메일) — 큼.
+   - **#1 Slack alert 노드 추가** (pre-onboarding/게스트 알림) — 중간.
+   - **Production Plan/Schedule 실제 운영 시작** (스키마는 이미 있음, 실 데이터 입력) — 영업·생산 협의 필요.
+4. **사용자 손 작업** (Claude 진행 불가):
+   - Tally signing secret 발급 (#7a 빌드 전제)
+   - Airtable 자동화 `Onboarding Submissions.status=approved → n8n #7b webhook` (#7b URL 확보 후)
+   - Xero Branding theme 회사 계좌 입력 (#2.5 가동 전)
+   - ClickSend `YoungFoods` 알파태그 승인 확인 (~2026-05-30, #6 가동 전)
+   - HubSpot Private App scope 확장 (위 2번에서 필요 시)
+
+## 활성화 전 워크플로우 점검 체크리스트
+
+| 워크플로우 | id | 활성화 전 점검 |
+| --- | --- | --- |
+| #0 (HubSpot→Airtable+토큰) | `lNABcJuKPABoqQf0` | HubSpot scope `crm.objects.companies.write`, 수동 테스트 실행, 기존 Company bootstrap 여부 |
+| #1 (주문 제출) | `twZw1wv3Fc1iJdeO` | Webhook Bearer 토큰 (n8n credential `order-intake-token` id `dY4EiGLUEsseUd4h`)을 주문 사이트에 박기, 컷오프 검증·중복 의심 Slack 등 미구현 인지 |
 
 ## 다음 작업 후보 (사용자가 turn 시작 시 택일):
 - n8n 워크플로우 #6c 후보 (이메일 복구 — order-site 정책상 phone OR email 모두 허용) — 운영 가동 후 수요 보고 결정
-- Production Plan/Schedule 실제 Airtable 베이스에 테이블 생성 (스키마 → 실 구현)
-- 본격 가동 단계로 전환 (남은 워크플로우 설계 없음, 운영 액션 집행 + 실제 시스템 구현)
-- #2.5·#5·#6·#7 가동 전 운영 액션: (#7) Airtable `Onboarding Submissions` 테이블, HubSpot `Customer Group` property, HubSpot workflow `Onboarding=approved`→webhook, Tally signing secret. (#6) Airtable `SMS Log` 테이블, ClickSend 계정·sender ID 등록, n8n `clicksend-creds` credential. (#2.5) Xero Branding theme에 회사 계좌(BSB·계좌번호) footer/payment instructions 등록. (#5) HubSpot Company custom property `Hold Reason`·`Outstanding (AUD)` 신설
+- Production Plan/Schedule 실제 운영 시작 (스키마 있음, 실 데이터 입력)
+- 본격 가동 단계로 전환 (운영 액션 집행 + 실제 시스템 구현)
+- 가동 전 사용자 UI 액션 남은 것: Airtable 자동화 (`Onboarding Submissions.status=approved → n8n #7b webhook`, #7b 빌드 후 URL 박기), Tally signing secret, Xero Branding theme 계좌, HubSpot Private App scope (필요시), ClickSend `YoungFoods` 승인 확인
 
 남은 운영 액션(설계 외): n8n에 Custom Connection 키·ops-* 채널 ID 등록 (clientSecret은 placeholder인 상태, 사용자가 n8n UI에서 직접 입력하도록 안내함 — [[xero-account]]), Xero scope 문제 진단 대기 ([[xero-account]]).
 
