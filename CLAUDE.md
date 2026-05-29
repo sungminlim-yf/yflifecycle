@@ -1,7 +1,7 @@
 # Young Foods — B2B 주문 시스템 (프로젝트 루트)
 
-> **상태**: 설계 초안 v0.3 — 도메인별 폴더 구조로 재편
-> **마지막 업데이트**: 2026-05-28
+> **상태**: 설계 초안 v0.4 — 매직 토큰 = HubSpot 생성 시 발급 모델로 개정
+> **마지막 업데이트**: 2026-05-29
 > **이 문서의 역할**: 전체 개요·핵심 원칙·시스템 역할 분담 + **각 도메인 폴더 안내(라우터)**.
 > 상세 설계는 각 폴더의 `CLAUDE.md`에 있다 (해당 폴더에서 작업하면 자동으로 함께 읽힌다).
 
@@ -67,7 +67,7 @@
 
 ## 확정된 주요 결정 (프로젝트 대시보드)
 
-- 토큰: **영구 + 신고 시 폐기·재발급** / QR은 영구 토큰 지시 (→ `onboarding/`)
+- 토큰: **영구 + 신고 시 폐기·재발급**. **발급 시점 = HubSpot Company 생성 직후 (#0이 자동 발급, Airtable 고객 행 + HubSpot magic_token property 동기 sync)**. 온보딩 완료 전에도 토큰 보유 → pre-onboarding 주문 가능. QR은 영구 토큰 지시 (→ `onboarding/`)
 - 인보이스: **dispatch 시 발행**, payment term별 분기 (선결제/COD만 dispatch 전) (→ `xero/`)
 - DD: **Xero–GoCardless 네이티브 자동 수금**, due date = **매주 화요일**(월·화 dispatch 인보이스는 다음 주 화요일로 밀림), mandate는 온보딩 1회
 - 키 구조: **Airtable 고객 테이블이 매핑 허브**
@@ -87,7 +87,9 @@
 - **n8n 워크플로우 #2 (dispatch → Xero 인보이스)**: DD/7-day 한정. Airtable 출하 상태 변경 트리거, 즉시 발행. 박스 단가 line(tax=`EXEMPTOUTPUT`) + 조건부 배송비 line(`<$300 → UnitAmount=5, tax=OUTPUT, DiscountRate=0 override` → 총 $5.50). 인보이스 `LineAmountTypes=Exclusive`. Xero Item Code = `KAT`/`GAR`/`TER`. Contact discount % 자동(내부 5%/일반 0%, 배송비 제외). Due date = 다음 화요일(DD)/+7일(7-day). PDF 자동 발송. 멱등은 `Xero 인보이스 ID` 필드 사전 체크 + reference로 부분실패 복구. 선결제·COD는 #2.5 별도.
 - **n8n 워크플로우 #3 (Xero → Airtable 결제·Hold 동기화)**: INVOICE.UPDATE webhook + 매시간 polling 폴백 이중 구조. invoice fetch → 오더 매칭 → 결제 상태/오더 Hold(선결제·COD 한정) update. 그 후 고객 contact의 outstanding 재계산 + credit limit·overdue 대비로 고객 hold 산출(`outstanding ≥ credit_limit OR overdue ≥ 1`). hold_reason은 overdue 우선. webhook HMAC-SHA256 서명 검증. 멱등은 "현 값과 같으면 skip" 가드 + last_sync_at 성공 시만 갱신. **#4(credit limit 비교)는 #3에 통합.**
 - **온보딩 폼 매칭 패턴 (2026-05-28)**: HubSpot 이메일 템플릿 personalization token으로 Tally URL에 `hubspot_id={{company.hs_object_id}}&email={{contact.email}}` prefill → Tally hidden field가 webhook payload에 실어 보내줌 → n8n #7이 ID로 자동 매칭 (수동 매칭 0). forward 오염 대비 email cross-check, ID 없이 진입 시 email fallback 매칭. 영업·고객·어드민 모든 진입 경로 단일 패턴. 상세는 `onboarding/CLAUDE.md` "폼 발송·매칭 패턴".
-- **n8n 워크플로우 #7 (온보딩 폼 propagate)**: **#7a/#7b 분할 설계 완료**. #7a = Tally webhook → HubSpot 매칭(+forward 가드) → Airtable `Onboarding Submissions` staging 행 생성 → HubSpot `Onboarding=form submitted` → Slack `#ops-onboarding`. **영업 수동 review**: `Customer Group` 지정(내부/일반) + `Onboarding=approved`. #7b = HubSpot workflow webhook → 안전 체크 5종 → Xero Contact 생성(discount % 그룹 기반) → Airtable 고객 행 생성(토큰 발급) → 미배정 주문 소급매칭 후보 Slack → 환영 이메일(HubSpot single-send). **신설 운영 액션**: Airtable staging 테이블, HubSpot `Customer Group` property, HubSpot workflow `Onboarding=approved`→webhook, Tally signing secret.
+- **온보딩 모델 v2 (2026-05-29 개정)**: ① 매직 토큰은 **HubSpot Company 생성 시점에 #0이 자동 발급** (랜덤 매핑형). 영업은 profile만 만들면 즉시 매직 링크 발송 가능. ② 정식 온보딩 승인 주체는 **admin team** (영업 X). admin이 Airtable `Onboarding Submissions` staging을 보고 review → status=approved로 변경하는 것이 **트리거**. ③ 고객 그룹(`내부고객`/`일반고객`) 지정 시점은 **HubSpot Company 생성 직후 영업이 결정** (default `일반고객`, 가맹점/자매사만 영업이 `내부고객`으로 변경) — 온보딩 review 단계로 미루지 않음. ④ Pre-onboarding 주문(payment term 없는 매직링크 고객) = derive only (필드 추가 X): 고객 link 있음 + Payment term 비어있음 → #1이 자동으로 오더 hold ON + Slack 알림. ⑤ pre-onboarding 고객의 입력 정보(배송지·연락처)는 **오더에만 저장** (고객 행은 admin이 Tally form 처리 시 채움). ⑥ #7b 환영 이메일은 분기 — 기존 hold 오더 있으면 "다음 오더부터 이 링크 사용" wording 추가 + 기존 hold 오더 자동 release.
+- **n8n 워크플로우 #0 (HubSpot Company create → Airtable 사전 생성 + 매직 토큰 발급)** — **2026-05-29 신설**: HubSpot Company create webhook(또는 polling) → 랜덤 매직 토큰 생성(UUID v4) → Airtable 고객 행 사전 생성(`HubSpot 고객 ID` + `매직 토큰` + `상호`만, payment term 비어있음) → HubSpot Company `magic_token` property PATCH 동기 → (`customer_group` 비어있으면 default `일반고객` set). 영업이 profile만 만들면 바로 매직 링크 이메일 발송 가능(HubSpot 이메일 템플릿이 `{{company.magic_token}}` personalization token으로 prefill).
+- **n8n 워크플로우 #7 (온보딩 폼 propagate) — 2026-05-29 개정**: **#7a/#7b 분할**. #7a = Tally webhook → HubSpot 매칭(+forward 가드) → Airtable `Onboarding Submissions` staging 행 생성 → HubSpot `Onboarding=form submitted` → Slack `#ops-onboarding`. **admin team 수동 review** (영업 X): Airtable에서 staging 확인 후 status=`approved`로 변경 (Customer Group은 #0 단계에서 이미 지정됨, 변경 필요시 영업이 수정). #7b = **Airtable Onboarding Submissions status=approved 트리거** (개정 전: HubSpot workflow webhook) → 안전 체크 → Xero Contact 생성(discount % 그룹 기반) → Airtable 고객 행 update(이미 #0이 생성한 행에 payment term·배송지 등 채움) → **기존 hold 오더 자동 release** → 환영 이메일(조건부 wording — 기존 hold 오더 있으면 "다음 오더부터 이 링크 사용" 안내). **신설 운영 액션**: Airtable staging 테이블, HubSpot `Customer Group` property, **Airtable 자동화 `Onboarding Submissions.status=approved` → n8n webhook** (개정 전: HubSpot workflow), Tally signing secret.
 - **n8n 워크플로우 #6 (SMS)**: **#6a/#6b 분할 설계 완료** (2026-05-28). #6a = sub-workflow, #1이 fire-and-forget 호출, 주문 1건당 SMS 1건(매직링크 동봉), 멱등은 `order_no` 기준, ClickSend(`YoungFoods` sender ID) 호출. #6b = webhook, order-site 글로벌 페이지가 호출, 보안 게이트(등록·미등록 동일 응답 = enumeration 차단 / 등록된 번호로만 발송 / **rate limit = 전화번호 기준 시간당 3·일 10, silent absorb**) + Airtable 고객 `링크 재요청 횟수`+1 ⇒ ≥2면 QR 추천 플래그·Slack. 전화번호 정규화 E.164 AU. **신설 운영 액션**: Airtable `SMS Log` 테이블, ClickSend 계정·sender ID 등록, n8n `clicksend-creds` credential.
 - **n8n 워크플로우 #2.5 (선결제·COD 인보이스 발행)**: **설계 완료** (2026-05-28). 모델 재확인 = "COD = 주문 후 빠른 선결제 변형" (호주 일반 현장 결제 모델 아님). Airtable 오더 trigger + payment term ∈ {Prepay, COD} 필터 → 안전 체크 5종 → #2와 동일 line 구성(KAT/GAR/TER + 그룹 할인 + 배송비 line) → Xero invoice(`Date = DueDate = 오늘`, `Reference = 주문번호`, `LineAmountTypes = Exclusive`) → 자동 이메일(Branding theme footer에 회사 계좌) → Airtable `Xero 인보이스 ID` + `오더 Hold = true` + `결제 상태 = 미결제`. 결제 채널 = **Manual bank transfer** (Stripe·GoCardless one-off는 운영 안정화 후). 결제 확인 → #3가 INVOICE.UPDATE 수신 → hold 해제 → dispatch 가능. #1과 결합 X (Airtable trigger 패턴, #2와 일관). **신설 운영 액션**: Xero Branding theme footer/payment instructions에 회사 계좌(BSB·계좌번호) 등록.
 - **n8n 워크플로우 #5 (재무 → HubSpot 공유)**: **설계 완료** (2026-05-28). Airtable 고객 테이블 change trigger (`hold` OR `hold_reason` OR `outstanding` 변경) → HubSpot Company 3개 property (`Account Hold` / `Hold Reason` / `Outstanding (AUD)`) PATCH. **멱등** = HubSpot 현 값과 비교 후 동일하면 skip. 게스트(`HubSpot 고객 ID` 없음) silently skip. `hold=false`면 `hold_reason` 강제 공백. 확장 항목(Overdue·Credit Limit·Last Payment) 보류 — 운영 가동 후 영업 피드백 보고 추가. **신설 운영 액션**: HubSpot Company custom property `Hold Reason`(text) + `Outstanding (AUD)`(currency) 추가.
@@ -99,7 +101,7 @@
 
 | 항목                                              | 소유 폴더    |
 | ------------------------------------------------- | ------------ |
-| 남은 워크플로우 후보                                 | **#1·#2·#2.5·#3·#5·#6(a/b)·#7(a/b) 전부 설계 완료**. 추가 후보: #6c(이메일 복구) — 운영 가동 후 수요 보고 결정 |
+| 남은 워크플로우 후보                                 | **#0·#1·#2·#2.5·#3·#5·#6(a/b)·#7(a/b) 전부 설계 완료**. 추가 후보: #6c(이메일 복구) — 운영 가동 후 수요 보고 결정 |
 | #2.5·#5·#6·#7 가동 전 운영 액션 (테이블/property/계정/credential/Branding theme) | `airtable/`·`hubspot/`·ClickSend·Tally·Xero — 위 결정 항목 참조 |
 | Target/Safety/default_dispatch 초기값 (3 SKU × 3 = 9개) | `airtable/` (영업·생산 협의) |
 | `first order` / `repeat order` 진입 기준 + 영업 활동 로깅 규칙 + 이탈 고객 처리 | `hubspot/` (앞 단계 new/contact/sample/onboard 닫힘 — 2026-05-28) |

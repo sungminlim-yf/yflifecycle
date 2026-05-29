@@ -38,8 +38,9 @@
 | Company owner | 표준 | 담당 영업 | 영업·매니지먼트 |
 | **Sales Pipeline** | custom | `new` / `contact` / `sample` / `onboard` / `first order` / `repeat order` | 영업 (단계별 수동 갱신) |
 | **Sample** | custom | `requested` / `delivered` / `tested` / `feedback received` | 영업 (샘플 진행 시) |
-| **Onboarding** | custom | `form sent` / `form submitted` / `form reviewed` / `pending information` / `approved` | 영업 (HubSpot 검토 진행 시) — `form submitted`는 n8n #7a 자동 갱신, `approved`는 영업 수동 (이게 #7b 트리거) |
-| **Customer Group** | custom | `내부고객` / `일반고객` | 영업 (Onboarding `approved` **전에** 반드시 지정) — Xero default discount % 자동 산정의 source. 미지정 상태로 approved 되면 n8n #7b가 abort + Slack 알림 |
+| **Onboarding** | custom | `form sent` / `form submitted` / `form reviewed` / `pending information` / `approved` | **admin team** 수동 (영업 X — 개정 2026-05-29). `form submitted`는 n8n #7a 자동 갱신. **`approved` 상태는 Airtable `Onboarding Submissions.status=approved`와 동기** — admin이 Airtable에서 approved로 바꾸면 #7b가 발화하고 HubSpot도 sync. (개정 전: HubSpot `Onboarding=approved` 자체가 #7b 트리거였음) |
+| **Customer Group** | custom | `내부고객` / `일반고객` | **영업** (HubSpot Company 생성 시점에 지정 — 개정 2026-05-29). default = `일반고객` (n8n #0이 비어 있으면 set), 가맹점/자매사만 영업이 `내부고객`으로 변경. Xero default discount % 자동 산정의 source. **온보딩 review 단계로 미루지 않음** (admin team review 단계에선 손대지 않음, 필요시 영업이 별도 수정). 미지정 상태로 #7b 발화하면 default `일반고객` 사용 |
+| **Magic Token** | custom (신설 2026-05-29) | text (랜덤, 영구) | **n8n #0 자동** — HubSpot Company 생성 시 발급, Airtable 고객 행과 동기 sync. 이메일 템플릿에서 `{{company.magic_token}}` personalization token으로 매직 링크 URL prefill. 폐기·재발급 시 Airtable + HubSpot 양쪽 update |
 | **Account Hold** | custom | `Yes` / `No` | **n8n #5 자동 동기** (Airtable 고객 `hold` ← Xero #3가 갱신). 영업 수동 override도 가능하지만 다음 #5 발화 시 덮어씌워짐 |
 | **Hold Reason** | custom (신설) | single-line text (~100자) | n8n #5 자동 — `"overdue: 2건, $1,250"` 또는 `"credit limit: $5,000/$5,000"` 형식. hold=No면 빈 문자열 |
 | **Outstanding (AUD)** | custom (신설) | number (currency format) | n8n #5 자동 — 고객 미수금 합계 (Xero `AUTHORISED`+`SUBMITTED` ACCREC AmountDue). 영업 대화 자료 |
@@ -98,7 +99,7 @@
 - Credit Application (Tally 폼 내 작성) 또는
 - Direct Debit (GoCardless Billing Request Flow 링크)
 
-폼 제출 → HubSpot Onboarding property `form submitted` → 영업 review → `approved` → Airtable propagate (`../n8n/` 워크플로우).
+폼 제출 → HubSpot Onboarding property `form submitted` → **admin team review (Airtable staging)** → admin이 status=approved로 변경 → **Airtable 자동화가 #7b webhook 호출** → Airtable 고객 행/Xero Contact propagate + HubSpot Onboarding=approved sync.
 
 ---
 
@@ -106,8 +107,9 @@
 
 | 필드 | 방향 | 상대 |
 | --- | --- | --- |
-| HubSpot Company ID | → Airtable | 정식 승격 후 매핑 키로 저장 (`../airtable/schema.md` 고객 테이블) |
-| HubSpot Contact ID | → Airtable | 〃 |
+| HubSpot Company ID | → Airtable | **HubSpot Company 생성 시점에** 매핑 키로 저장 (개정 2026-05-29 — `정식 승격 후`가 아니라 생성 직후). `../airtable/schema.md` 고객 테이블 |
+| HubSpot Contact ID | → Airtable | 〃 (Contact 추가될 때 same workflow가 sync) |
+| Magic Token | ↔ Airtable | **n8n #0가 양방향** — Company 생성 시 #0이 랜덤 토큰 생성 → Airtable + HubSpot magic_token property 양쪽에 동기. 폐기·재발급 시 양쪽 update |
 | Account Hold / Hold Reason / Outstanding (AUD) | ← Airtable (← Xero) | **n8n #5가 동기** — Airtable 고객 hold/reason/outstanding이 변하면 즉시 HubSpot Company 3개 property에 미러. 원천은 Xero(#3가 invoice update 받아 outstanding 재계산·hold 산출) → Airtable → HubSpot |
 | Tally 폼 입력값 | → HubSpot → Xero → Airtable | 온보딩 승격 워크플로우가 각 시스템에 propagate |
 

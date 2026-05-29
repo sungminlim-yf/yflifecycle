@@ -36,8 +36,10 @@ new → contact → sample → onboard → first order → repeat order
 - **자동**: HubSpot Company ID 생성
 - **Sales Pipeline 값**: `new`
 - **Contact 객체**: 없음
+- **영업이 함께 결정**: `Customer Group` (default `일반고객`, 가맹점/자매사면 `내부고객`으로 변경) — 비워두면 #0이 default 일반고객 set
+- **자동 (n8n #0 — 개정 2026-05-29)**: HubSpot Company create webhook → 매직 토큰 생성 → Airtable 고객 행 사전 생성 → HubSpot `magic_token` property 동기. **이 시점부터 영업이 매직 링크 이메일 발송 가능** (HubSpot 이메일 템플릿에 `{{company.magic_token}}` personalization). Pre-onboarding 손님이 현장에서 즉석 주문 가능.
 
-> 진입 장벽을 의도적으로 낮춤. 가게 이름만 알아도 일단 등록 → 영업 파이프라인에 올라옴.
+> 진입 장벽을 의도적으로 낮춤. 가게 이름만 알아도 일단 등록 → 영업 파이프라인에 올라옴. 매직 링크는 이 단계부터 보낼 수 있어 영업 유연성 ↑.
 
 ---
 
@@ -75,13 +77,13 @@ new → contact → sample → onboard → first order → repeat order
 - **갱신**: 영업이 `Sales Pipeline = onboard`로 변경 + 온보딩 폼 발송 액션 수행
 - **세부 status (`Onboarding` property)**:
 
-  | 값 | 의미 |
-  | --- | --- |
-  | `form sent` | HubSpot 이메일 템플릿으로 Tally 폼 링크 발송 완료 |
-  | `form submitted` | 고객이 Tally 폼 제출 |
-  | `form reviewed` | 영업·Admin이 제출 내용 검토 완료 |
-  | `pending information` | 정보 누락·추가 필요 → 고객에게 재요청 |
-  | `approved` | 모든 정보 OK, 정식 고객 승격 결정 |
+  | 값 | 의미 | 갱신 주체 |
+  | --- | --- | --- |
+  | `form sent` | HubSpot 이메일 템플릿으로 Tally 폼 링크 발송 완료 | admin (수동) |
+  | `form submitted` | 고객이 Tally 폼 제출 | n8n #7a (자동) |
+  | `form reviewed` | admin team이 Airtable staging 검토 완료 | admin (Airtable에서, sync는 manual or 별도 workflow) |
+  | `pending information` | 정보 누락·추가 필요 → 고객에게 재요청 | admin |
+  | `approved` | 모든 정보 OK, 정식 고객 승격 결정 | **Airtable에서 status=approved 변경 → #7b sync** (HubSpot에서 직접 수동 X — 개정 2026-05-29) |
 
 - **이 단계의 액션 게이트 — Contact 필수** (`customer-profile.md`의 Contact 정책 참조). 폼 발송 워크플로우가 `Sales Pipeline = onboard` 진입 시 Company에 email 있는 Contact ≥ 1개 검증. 없으면 발송 중단 + Slack 알림.
 
@@ -103,16 +105,19 @@ new → contact → sample → onboard → first order → repeat order
 
 ---
 
-## 핸드오프 — HubSpot → onboarding/airtable/xero
+## 핸드오프 — Airtable → onboarding/xero (개정 2026-05-29)
 
-`Onboarding` property = `approved` 도달이 정식 승격 트리거.
+**개정 전**: HubSpot `Onboarding=approved` 도달 = 트리거
+**개정 후**: **Airtable `Onboarding Submissions.status=approved` 도달 = 트리거** (admin team이 Airtable에서 review·승인)
 
-워크플로우 처리(`../n8n/` 영역, 번호는 추후 부여):
-1. HubSpot Company / Contact에 "정식 고객" 마킹
-2. 영업이 결정한 **고객 그룹**(`내부고객` / `일반고객`) — 폼이 아닌 영업 판단으로 입력 (`../onboarding/CLAUDE.md` 참조)
-3. Xero Contact 생성 (default discount % = 그룹 기반 5%/0% 자동 입력)
-4. Airtable 고객 테이블에 신규 레코드 + HubSpot ID + Xero ContactID + 매직 토큰 발급
-5. 매직 링크 이메일 발송 → 고객이 정문 A로 진입 가능
+워크플로우 처리(`../n8n/` 영역, #7b):
+1. **이미 완료된 것** (#0이 Company 생성 시 처리): Airtable 고객 행 + HubSpot 고객 ID + 매직 토큰 + Customer Group default
+2. (Sample/Onboarding 진행 중) 영업이 가맹점/자매사면 Customer Group을 `내부고객`으로 수정 (선택)
+3. #7b 발화: Xero Contact 생성 (default discount % = 그룹 기반 5%/0% 자동 입력)
+4. Airtable 고객 테이블 기존 행 update — Xero ContactID, payment term, 기본 배송지 등 채움
+5. **기존 hold 오더 자동 release** — pre-onboarding 시기에 매직 링크로 들어온 오더는 hold 상태였음, 이를 admin이 dispatch할 수 있게 풀어줌
+6. HubSpot Onboarding=approved 미러 sync
+7. 환영 이메일 발송 (HubSpot single-send, **조건부 wording** — 기존 hold 오더 있으면 "다음 오더부터 이 링크 사용" 안내)
 
 ---
 
@@ -130,4 +135,5 @@ new → contact → sample → onboard → first order → repeat order
 - 단계: `new → contact → sample → onboard → first order → repeat order` (마지막 2개는 진입 기준 TBD)
 - `Sample` / `Onboarding`은 단계 내 세부 status를 표현하는 별도 Company property
 - 단계 전환은 **영업 수동** (자동화 안 함). 단, **온보딩 폼 발송 액션은 Contact 검증 게이트** 거침
-- 핸드오프 트리거: `Onboarding = approved`
+- 핸드오프 트리거 (개정 2026-05-29): **Airtable `Onboarding Submissions.status = approved`** (admin team이 변경). HubSpot Onboarding property는 sync용 미러로만 동작
+- 매직 토큰 발급 시점 (개정 2026-05-29): **Company 생성 시 #0이 자동** (영업 단계 `new` 진입과 동시)

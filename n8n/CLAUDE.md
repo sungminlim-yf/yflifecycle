@@ -59,7 +59,9 @@
 | Airtable | Xero | **주문 직후** 인보이스 생성 (Prepay / COD) + 오더 hold ON | 오더 생성 + payment term 필터 (#2.5) |
 | Xero | Airtable | 인보이스 Paid → 결제 Paid + Hold 해제 / 고객 hold·hold reason·outstanding 동기화 | Xero webhook + 폴링 폴백 |
 | GoCardless | Xero | DD 수금 결과 자동 반영·대사 | (Xero 네이티브, n8n 불필요) |
-| HubSpot/Xero | Airtable | 신규 고객 → ID 매핑·토큰 발급 (승격 시) | 온보딩 완료 |
+| HubSpot | Airtable | **Company 생성 시 사전 생성** (Airtable 고객 행 + 매직 토큰 발급) | HubSpot Company create (#0) |
+| Airtable | HubSpot | 매직 토큰 → HubSpot `magic_token` property 동기 | #0 발화 시 |
+| Airtable | HubSpot/Xero | Onboarding approved 시 payment term/Xero Contact propagate | Airtable Onboarding Submissions status (#7b, 개정 2026-05-29) |
 | Airtable | HubSpot | 영업용 재무 상태 공유 (hold/overdue/outstanding) | Airtable 변경 |
 | Airtable | 영업(Slack) | 미배정·소급 매칭·중복·취소·QR 추천 알림 | Airtable 자동화/n8n |
 | 주문 사이트 | 문자 발송 서비스 | 분실 복구 링크 문자, 주문 확인 문자 | 주문/재발급 이벤트 |
@@ -68,9 +70,15 @@
 
 ## 설계할 핵심 워크플로우
 
-### 1. 주문 제출 → Airtable ✅ 설계 완료
+### 0. HubSpot Company create → Airtable 사전 생성 + 매직 토큰 발급 ✅ 설계 완료 (2026-05-29 신설)
+- 상세는 아래 "워크플로우 #0 상세" 섹션 참조.
+- **scope**: HubSpot Company 생성 시점에 발화. 매직 토큰을 미리 발급해 영업이 정식 온보딩 전에도 매직 링크 발송·주문 접수 가능하게 함.
+- 핵심: HubSpot webhook(또는 polling) → 랜덤 매직 토큰 → Airtable 고객 행 사전 생성(payment term 비어있음) → HubSpot `magic_token` property 동기 + `customer_group` default `일반고객` 보완.
+
+### 1. 주문 제출 → Airtable ✅ 설계 완료 (skeleton 빌드 완료 2026-05-29)
 - 상세는 아래 "워크플로우 #1 상세" 섹션 참조.
 - 핵심: webhook 직행, 통합 endpoint(mode 분기), 서버 가격 산출, **MOQ $150 검증**(할인 전 subtotal), UUID 멱등키, 같은 배송일+동일 sku 조합 = 중복 의심.
+- **Pre-onboarding 분기 (개정 2026-05-29)**: 매직링크 + 고객 매칭 + payment term 비어있음 → 오더 hold ON 자동 + Slack `#ops-onboarding` 알림. 게스트도 동일. 입력 정보(배송지·연락처)는 오더에만 저장.
 
 ### 2. dispatch → Xero 인보이스 생성 ✅ 설계 완료
 - 상세는 아래 "워크플로우 #2 상세" 섹션.
@@ -99,13 +107,73 @@
 - **#6b (분실 복구 webhook)**: order-site 글로벌 페이지 호출. 등록된 번호로만 발송, enumeration 차단(동일 응답), rate limit(시간당 3회·일 10회/번호), 재요청 ≥2 → QR 추천 플래그.
 - **신설 필수**: Airtable `SMS Log` 테이블, ClickSend credential `clicksend-creds`(Basic auth).
 
-### 7. 온보딩 폼 제출 → HubSpot/Xero/Airtable propagate ✅ 설계 완료 (2026-05-28)
+### 7. 온보딩 폼 제출 → HubSpot/Xero/Airtable propagate ✅ 설계 완료 (개정 2026-05-29)
 - 상세는 아래 "워크플로우 #7a/#7b 상세" 섹션.
-- **#7a (Tally webhook → intake)**: 매칭(ID→email→none) + forward 가드 + Airtable staging 행 생성 + HubSpot Onboarding=form submitted + Slack
-- **#7b (HubSpot `Onboarding=approved` → propagate)**: Xero Contact 생성 + Airtable 고객 행 생성 + 토큰 발급 + 미배정 주문 소급매칭 + 환영 이메일
-- **신설 필수**: Airtable `Onboarding Submissions` 테이블 + HubSpot Company custom property `Customer Group` (single select: 내부고객/일반고객)
+- **#7a (Tally webhook → intake)**: 매칭(ID→email→none) + forward 가드 + Airtable staging 행 생성 + HubSpot Onboarding=form submitted + Slack `#ops-onboarding` (admin team review)
+- **#7b (Airtable `Onboarding Submissions.status=approved` → propagate)**: **트리거 위치 변경 — HubSpot workflow webhook → Airtable 자동화 webhook**. admin team이 Airtable에서 status=approved로 바꾸면 발화. Xero Contact 생성(그룹별 discount %) + Airtable 고객 행 update(이미 #0이 생성한 행에 payment term/배송지 등 채움) + **기존 hold 오더 자동 release** + HubSpot Onboarding=approved sync + 환영 이메일 (**조건부 wording** — hold 오더 있으면 "다음 오더부터 이 링크 사용" 안내)
+- **신설 필수**: Airtable `Onboarding Submissions` 테이블 + HubSpot Company custom property `Customer Group` (single select: 내부고객/일반고객) + **HubSpot Company `magic_token` property** (#0이 채움)
+- **운영 액션 변경**: HubSpot Workflow `Onboarding=approved → webhook` 불필요해짐 (트리거 위치 변경됨). 대신 **Airtable 자동화 `Onboarding Submissions.status=approved` → n8n #7b webhook** 신설
 
 ---
+
+---
+
+## 워크플로우 #0 상세: HubSpot Company create → Airtable 사전 생성 + 매직 토큰 발급
+
+### 트리거 (2개 옵션 — 운영 시 결정)
+
+- **옵션 A (권장)**: **HubSpot Workflow** — Company create 이벤트에 "Send a webhook" action → n8n webhook 호출. HubSpot Pro/Enterprise tier 필요. 즉시 동작.
+- **옵션 B (대안)**: **n8n cron polling** — 매 5분마다 HubSpot `GET /crm/v3/objects/companies?createdate > {last_run}` → 신규 Company 처리. tier 제약 없음. 최대 5분 latency.
+
+### Payload (옵션 A 기준)
+```json
+{
+  "objectId": "<hubspot_company_id>",
+  "occurredAt": "<ISO timestamp>",
+  "subscriptionType": "company.creation"
+}
+```
+
+### 노드 흐름
+
+1. **트리거 수신** (webhook 또는 cron)
+2. **Company fetch**: `GET /crm/v3/objects/companies/{id}?properties=name,customer_group,magic_token,domain,phone`
+3. **멱등 체크**: Airtable 고객 테이블에서 `HubSpot 고객 ID = {id}` lookup
+   - 이미 있으면 → magic_token 비어있는지 확인 → 비어있으면 토큰 생성·sync, 아니면 skip
+4. **매직 토큰 생성**: UUID v4 (또는 32바이트 hex) — 랜덤·추측 불가능
+5. **Airtable 고객 행 생성** (또는 update):
+   - `HubSpot 고객 ID` = Company ID
+   - `매직 토큰` = 발급한 토큰
+   - `상호` = Company name
+   - `고객 그룹` = HubSpot `customer_group` (없으면 `일반고객` default)
+   - Payment term · 배송지 · 담당자 등은 비워둠 (온보딩 시 #7b가 채움)
+6. **HubSpot Company PATCH**: `magic_token` property에 발급한 토큰 sync
+7. **(옵션) HubSpot Company `customer_group` 비어있으면 `일반고객` set** (default 보완)
+
+### 부수 효과
+
+- 영업이 HubSpot 이메일 템플릿에 `{{company.magic_token}}` personalization token으로 매직 링크 prefill 가능
+- 매직 링크 = `https://order.youngfoods.com.au/o/{{magic_token}}` 형식 (도메인은 운영 시 결정)
+- Pre-onboarding 고객도 정문 A 진입 가능 — payment term 없으니 주문 시 #1이 자동 hold ON
+
+### 멱등성
+
+- Airtable 고객 행 unique key: `HubSpot 고객 ID`
+- 같은 Company ID로 #0 재발화 시: 기존 행에 토큰 없으면 생성·sync, 있으면 skip
+- HubSpot webhook 재전송 OK
+
+### 에러 처리
+
+| 에러 | 동작 |
+| --- | --- |
+| Company fetch 실패 (HubSpot 5xx) | n8n 자동 재시도 |
+| Airtable 행 생성 실패 | n8n 재시도, 영구 실패 시 Slack `#ops-onboarding` |
+| HubSpot magic_token PATCH 실패 | Airtable에는 이미 토큰 있음 → 다음 #0 발화 시 sync 재시도 (멱등 보장) |
+
+### 신설 필수
+
+- HubSpot Company custom property `magic_token` (text) — **2026-05-29 생성 완료**
+- HubSpot Workflow `Company create → webhook` (옵션 A) 또는 n8n cron polling (옵션 B)
 
 ---
 
@@ -142,9 +210,12 @@
 5. **가격 산출**: 각 line의 sku로 제품 테이블 lookup → 박스 단가 × `quantity_boxes` → line subtotal
 6. **MOQ 검증**: Σ(line subtotal) **(할인 적용 전)** < `AUD 150` → `422 below_moq` + `{minimum: 150, current: <subtotal>}` 응답 후 종료. 사이트 인라인 안내용.
 7. **중복 의심 체크**: 같은 고객(또는 게스트면 `store_name + contact_phone`) + 같은 `requested_delivery_date` + sku 조합 일치(수량 무관)? → Slack `#ops-orders` 알림. 새 오더는 정상 저장 (블로킹 X).
-8. **오더 행 생성** (Airtable): 주문번호 Auto number, 멱등키, 고객/게스트 정보, 배송지 3필드, payment term lookup, 출하 상태 = `접수`
-9. **라인아이템 행 생성** (Airtable): line별 행 — sku link, quantity_boxes, 박스 단가, subtotal
-10. **게스트 분기 → Slack 알림** (`#ops-orders`, 영업 액션 대기 — `../onboarding/` 승격 큐)
+8. **Pre-onboarding 분기** (개정 2026-05-29) — 자동 hold ON 케이스 2가지:
+   - 매직링크 + 고객 매칭 + Payment term 비어있음 → `오더 Hold = true`, `고객 상태 = 등록완료` (고객 link는 있음). 사용자 입력 정보(상호·연락처·배송지)는 **오더 행에 직접 저장** (고객 행은 admin이 Tally form 처리 시 채움). Slack `#ops-onboarding` 알림 ("pre-onboarding 고객 주문 — admin 온보딩 진행 후 hold release")
+   - 게스트 (고객 link 없음) → `오더 Hold = true`, `고객 상태 = 미배정`. 사용자 입력 정보는 오더 행에 저장. Slack `#ops-onboarding` 알림 ("게스트 주문 — HubSpot 신규 등록 + 온보딩 진행")
+   - 정상 (매직링크 + 고객 매칭 + Payment term 있음) → `오더 Hold = false`
+9. **오더 행 생성** (Airtable): 주문번호 Auto number, 멱등키, 고객/게스트 정보, 배송지 3필드, payment term lookup, 출하 상태 = `접수`, 오더 Hold = step 8 결과
+10. **라인아이템 행 생성** (Airtable): line별 행 — sku link, quantity_boxes, 박스 단가, subtotal
 11. **SMS sub-workflow 호출** (fire-and-forget, 워크플로우 #6a): 주문번호·예상 배송일·매직링크
 12. **응답 반환** (200)
 
@@ -420,59 +491,69 @@
 
 ---
 
-## 워크플로우 #7b 상세: 영업 승인 → HubSpot/Xero/Airtable propagate
+## 워크플로우 #7b 상세: admin 승인 → Xero/Airtable propagate (개정 2026-05-29)
 
-> **scope**: 영업이 HubSpot Company에서 `Customer Group` 지정 + `Onboarding = approved`로 변경하면 자동 propagate. 신규 고객 레코드 + Xero Contact + 토큰 + 환영 이메일까지.
+> **scope**: **admin team이 Airtable** `Onboarding Submissions.status=approved`로 변경하면 자동 propagate. 매직 토큰·Airtable 고객 행은 #0이 이미 만들어둠 → #7b는 **Xero Contact 생성 + Airtable 고객 행 update(payment term/배송지) + 기존 hold 오더 release + HubSpot Onboarding sync + 환영 이메일**까지.
+>
+> **개정 전 (2026-05-28)**: 트리거 = HubSpot workflow webhook (`Onboarding=approved`). Airtable 고객 행 + 토큰을 여기서 생성.
+> **개정 후 (2026-05-29)**: 트리거 = Airtable 자동화 webhook. 고객 행·토큰은 #0이 사전 생성. #7b는 update만.
 
 ### 트리거
 
-- **HubSpot workflow webhook**: Company `Onboarding` property가 `approved`로 변경 → n8n #7b URL로 POST
-- payload: `{ vid: companyId, propertyName: "onboarding", newValue: "approved" }`
+- **Airtable 자동화 → n8n webhook**: `Onboarding Submissions.status=approved` 변경 시 발화.
+- payload: `{ submission_id, hubspot_company_id, status, ... }` (Airtable 자동화 raw payload)
+- 참고: HubSpot workflow `Onboarding=approved → webhook` **불필요** (운영 액션에서 제거됨)
 
 ### 안전 체크 (Xero/Airtable 생성 전)
 
-1. HubSpot Company의 `Customer Group` 설정됨? (`내부고객`/`일반고객`) — 없으면 abort + Slack `#ops-onboarding` ("승인 전 그룹 지정 필요")
-2. 매칭된 staging 행 (`hubspot_company_id = {companyId} AND status = under review`) 존재? — 없으면 abort + Slack
-3. Airtable 고객 테이블에 이미 동일 `HubSpot 고객 ID`로 행 존재? — 있으면 멱등 skip (이미 propagate 됨)
+1. HubSpot Company의 `Customer Group` 설정됨? (`내부고객`/`일반고객`) — 없으면 `일반고객` default (#0이 set했어야 함, 못 했으면 #7b가 보완)
+2. staging 행 (`submission_id = {x} AND status = approved`) 존재? — 없으면 abort + Slack
+3. Airtable 고객 행 (`HubSpot 고객 ID = {companyId}`) 존재? — **#0이 이미 만들어뒀어야 함**, 없으면 abort + Slack (`#ops-onboarding`, "#0 발화 실패 케이스") + #0 수동 fire 안내
 4. staging의 `payment_term_selection` 유효? (DD/7-day/Prepay/COD 중 하나)
 5. DD인 경우 `gocardless_mandate_id` 있음? — 없으면 abort + Slack ("mandate 미완료 — 고객에게 재안내")
+6. **이미 Xero ContactID가 Airtable 행에 있음?** — 있으면 멱등 skip (이미 propagate됨)
 
 ### 노드 흐름
 
-1. **Webhook 수신** → companyId 추출
-2. **HubSpot Company fetch** (`GET /crm/v3/objects/companies/{id}?properties=name,customer_group,onboarding,hubspot_owner_id`)
-3. **Staging row fetch** (Airtable): `hubspot_company_id = {companyId} AND status = under review` → 최신 1건
-4. **안전 체크 5가지** (위) → 실패 시 종료
-5. **Xero Contact 생성** (`POST /Contacts`):
-   - `Name` = `entity_name` (없으면 `shop_name`)
+1. **Webhook 수신** → submission_id 추출
+2. **Staging row fetch** (Airtable): `submission_id = {x} AND status = approved` → 최신 1건
+3. **Airtable 고객 행 fetch**: `HubSpot 고객 ID = staging.hubspot_company_id` → #0이 만든 행
+4. **HubSpot Company fetch** (`GET /crm/v3/objects/companies/{id}?properties=name,customer_group,onboarding,hubspot_owner_id,magic_token`)
+5. **안전 체크 6가지** (위) → 실패 시 종료
+6. **Xero Contact 생성** (`POST /Contacts`):
+   - `Name` = staging `entity_name` (없으면 `shop_name`)
    - `EmailAddress` = staging `form_email`
-   - `Phones`, `Addresses` (POBOX/STREET = `delivery_address`)
-   - `Discounts` = `5` (내부) / `0` (일반) — Customer Group 기반
+   - `Phones`, `Addresses` (POBOX/STREET = staging `delivery_address`)
+   - `Discounts` = `5` (내부) / `0` (일반) — HubSpot Customer Group 기반
    - `PaymentTerms` = payment_term_selection 매핑 (DD/7-day → 7-day net, Prepay/COD → Due on receipt)
    - 응답에서 `ContactID` 확보
-6. **토큰 생성** (n8n Code 노드, `crypto.randomBytes(16).toString('base64url')`):
-   - `magic_link_token` (16-byte URL-safe)
-   - `recovery_token` (16-byte URL-safe)
-7. **Airtable 고객 행 생성**:
-   - 상호 = `shop_name`, HubSpot Company ID = `{companyId}`, Xero ContactID = step 5 응답
+7. **Airtable 고객 행 update** (`#0이 만든 행`에 채우기):
+   - `Xero ContactID` = step 6 응답
    - 담당자·연락처·기본 배송지 = staging 값
-   - payment term, 고객 그룹 = HubSpot Customer Group
-   - `매직 링크 토큰`, `복구 토큰`, `created_at`
+   - `Payment term`, `고객 그룹` = HubSpot Customer Group
    - `gocardless_mandate_id` (DD 시)
-8. **Staging update**: `status = propagated`, link to new 고객 row
-9. **HubSpot Company update**:
-   - `PATCH /crm/v3/objects/companies/{id}` body 추가 property — `xero_contact_id`, `airtable_customer_id` (신설 권장 — 디버깅·운영 가시화용)
-   - `Sales Pipeline` 변경 X (영업 판단 영역, `first order` 진입 기준은 추후 결정)
-10. **미배정 게스트 주문 소급매칭 시도**:
+   - **참고: 매직 토큰은 이미 #0이 만들어둠, 건드리지 않음**
+8. **기존 hold 오더 자동 release**:
+   - Airtable 오더 lookup: `고객 link = {customerId} AND 오더 Hold = true AND 결제 상태 = 미결제` → 해당 행들의 `오더 Hold = false`로 update
+   - 이 오더들은 pre-onboarding 시기에 매직 링크로 들어와 hold 상태였음
+   - release 후 admin이 dispatch 진행 가능
+   - release한 오더 수 = `released_count` 변수에 저장 (이메일 wording 조건에 사용)
+9. **Staging update**: `status = propagated`, `linked_customer = {customerId}`
+10. **HubSpot Company update**:
+    - `PATCH /crm/v3/objects/companies/{id}` body — `Onboarding=approved` sync, (옵션) `xero_contact_id` / `airtable_customer_id` (신설 권장 — 디버깅·운영 가시화용)
+    - `Sales Pipeline` 변경 X (영업 판단 영역, `first order` 진입 기준은 추후 결정)
+11. **미배정 게스트 주문 소급매칭 시도** (옵션, 게스트 → 정식 케이스에만 의미):
     - Airtable 오더 lookup: `고객 link` 비어있고 `(상호 == shop_name OR 배송주소 == delivery_address)` 후보 검색
     - 후보 0건 → skip
-    - 후보 1건 이상 → **자동 link 금지**, Slack `#ops-orders` 알림 ("소급매칭 후보 N건 — admin 확인")
-11. **환영 이메일 발송**:
+    - 후보 1건 이상 → **자동 link 금지**, Slack `#ops-onboarding` 알림 ("소급매칭 후보 N건 — admin 확인")
+12. **환영 이메일 발송** (조건부 wording):
     - HubSpot Single-send transactional API (`POST /marketing/v3/transactional/single-email/send`)
-    - Template: 사전 등록된 "Welcome + 매직링크" 템플릿
-    - personalization: `magic_link_url = order.example.com/o/{magic_link_token}`, `shop_name`, `recovery_token` 등
+    - **분기 조건**: step 8의 `released_count > 0`?
+      - **Yes**: "Welcome + 기존 보류 주문 안내 + 매직링크" 템플릿 — 본문에 "기존 보류 주문 N건은 admin이 dispatch 처리합니다. **다음 오더부터는 아래 매직 링크를 사용해주세요** — 동일 링크 반복 사용 시 이중 주문 발생할 수 있습니다."
+      - **No**: 일반 "Welcome + 매직링크" 템플릿
+    - personalization: `magic_link_url = order.example.com/o/{magic_token}` (HubSpot magic_token property 또는 Airtable에서 가져옴), `shop_name`, `released_count` 등
     - 실패 시 non-blocking → Slack `#ops-onboarding` 으로 admin 수동 발송 요청
-12. **응답 200 반환**
+13. **응답 200 반환**
 
 ### 멱등성
 
@@ -484,8 +565,9 @@
 
 | 에러 | 동작 |
 | --- | --- |
-| `Customer Group` 미설정 | abort + Slack `#ops-onboarding` ("승인 전 그룹 지정 필요") |
+| `Customer Group` 미설정 | warning only — `일반고객` default로 진행 (#0이 set했어야 함, 못 했으면 #7b가 보완) |
 | Staging row 없음 | abort + Slack `#ops-onboarding` ("폼 제출 기록 없음 — 직접 입력 케이스?") |
+| **Airtable 고객 행 없음 (#0 실패)** | abort + Slack `#ops-onboarding` ("#0 발화 실패 — 수동 fire 필요") |
 | DD인데 mandate 없음 | abort + Slack `#ops-onboarding` ("mandate 미완료") |
 | Xero Contact 생성 실패 (필수 필드 누락 등) | abort + Slack `#ops-accounts` + staging은 그대로 (재승인 시 재시도) |
 | Airtable 5xx | n8n 자동 재시도. Xero 재사용 로직으로 안전 |

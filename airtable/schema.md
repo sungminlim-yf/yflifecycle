@@ -45,7 +45,7 @@
 | --- | --- | --- |
 | 주문번호 | Auto number | ORD-1001 형식 |
 | 고객 | Link | Airtable 고객 레코드 연결 (비어 있으면 미배정/게스트) |
-| 고객 상태 | Single select | 등록완료 / 미배정 |
+| 고객 상태 | Single select | 등록완료 / 미배정 (pre-onboarding은 별도 enum 추가 안 함 — 고객 link 있음 + 고객의 Payment term blank로 derive) |
 | Payment term | Single select | 7-day credit / GoCardless DD / 선결제·COD / (없음) |
 | 상호 | Text | 게스트는 직접 입력 |
 | 연락처 | Phone | 분실 복구·매칭에 사용 |
@@ -127,10 +127,12 @@
 
 - **HubSpot 고객 ID + Xero ContactID + 매직/복구 토큰** (매핑 허브 키)
 - 상호 / 담당자 / 이메일 / 연락처 / 기본 배송지 / payment term
-- **고객 그룹 (single select): `내부고객` / `일반고객`** — Xero Contact의 default discount % 결정 (내부 5% / 일반 0%). 그룹 변경 시 n8n이 Xero 동기 갱신.
+- **고객 그룹 (single select): `내부고객` / `일반고객`** — Xero Contact의 default discount % 결정 (내부 5% / 일반 0%). 그룹 변경 시 n8n이 Xero 동기 갱신. **default = `일반고객`** (#0이 HubSpot Company 생성 시 set), 가맹점/자매사만 영업이 HubSpot에서 `내부고객`으로 변경.
 - 고객 Hold (Xero에서 동기화: credit limit 초과·outstanding 문제) + hold reason
 - 링크 재요청 횟수 (QR 스티커 트리거용)
 - QR 스티커 추천 플래그 / 발급 여부
+
+> **매직 토큰 발급 시점 (개정 2026-05-29)**: HubSpot Company 생성 직후 **n8n #0이 자동 발급**. 영업이 잠재고객을 HubSpot에 등록만 하면 즉시 토큰 보유 → 정식 온보딩 전에도 매직 링크 발송 가능. 따라서 고객 테이블 행은 두 가지 상태로 존재 가능: ① 완전(#7b가 payment term·배송지 등 채움) ② **pre-onboarding** (HubSpot ID + 매직 토큰 + 상호만 있음, 나머지 비어있음). Pre-onboarding 행은 derive 식별 — 별도 status 필드 없음 (Payment term blank로 판별).
 
 ---
 
@@ -160,7 +162,9 @@
 
 ## 온보딩 신청 테이블 — `Onboarding Submissions` (staging) — `tblWrkl7mDixzbpTK`
 
-> **역할**: Tally 폼 제출 ~ 영업 승인 사이의 staging. n8n #7a가 생성, 영업이 review, #7b가 승인 후 고객 테이블로 propagate. 운영 가시화 + 멱등 키 보관 + 매칭 실패·forward 오염 케이스 처리 흔적.
+> **역할 (개정 2026-05-29)**: Tally 폼 제출 ~ **admin team 승인** 사이의 staging. n8n #7a가 생성, **admin이 Airtable에서 직접 review** (영업 X), **status=approved로 변경하는 것이 #7b 트리거** (개정 전: HubSpot Onboarding=approved가 트리거였음). 운영 가시화 + 멱등 키 보관 + 매칭 실패·forward 오염 케이스 처리 흔적.
+>
+> **Airtable 자동화 필요**: `status` 필드가 `under review → approved`로 변경되면 → n8n #7b webhook 호출. (운영 액션 신설)
 
 | 필드 | 타입 | 비고 |
 | --- | --- | --- |
