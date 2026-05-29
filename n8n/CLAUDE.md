@@ -888,10 +888,82 @@ Workspace는 `action-required` 카테고리에 ops-* 채널 8개 + 별도 `#ops-
 
 ---
 
+---
+
+## 워크플로우 #8 상세: 온보딩 폼 완료 후 DD redirect handler (설계, 2026-05-29)
+
+> **scope**: Tally 폼 제출 후 redirect URL 도착 → payment method에 따라 분기 → DD면 GoCardless flow URL로 302 redirect, 다른 경우 정적 thank-you HTML. **Tally 폼 안 GoCardless 정적 임베드 불가 (BRT single-use) 문제 해결책**.
+
+### 사전 준비 (운영 액션)
+
+- **GoCardless 계정** (호주, BECS 스킴) + API key 발급 (Sandbox 먼저, Live 운영용)
+- **n8n credential** `gocardless-api-key` (httpHeaderAuth 또는 OAuth2) 등록
+- **Tally 폼 `Me75K8` redirectOnCompletionUrl 설정** → `https://youngfoods.app.n8n.cloud/webhook/onboarding-redirect-v1?response_id={response_id}` (Tally placeholder `{response_id}` 또는 `{field_id}` 지원 여부 UI에서 확인 필요)
+- **Airtable** `Onboarding Submissions`에 `gocardless_billing_request_id`·`gocardless_flow_url` 컬럼 신설 권장 (멱등성·추적용)
+
+### 트리거
+- n8n webhook (HTTPS **GET**, responseMode=responseNode) — Tally redirect 도착 시 호출
+- Query: `response_id` (Tally `submission_id`와 동치)
+
+### 노드 흐름
+
+1. **Webhook** (GET, responseNode)
+2. **Validate Query** (Code): `response_id` 파라미터 검증 + 정규화
+3. **Fetch Staging Row** (HTTP GET Airtable): `submission_id = {response_id}` filterByFormula
+4. **IF Staging Found** → 미발견 시 정적 에러 페이지 응답
+5. **Code Decide Branch**: `payment_term_selection` 보고 분기 결정
+6. **IF Payment Term**:
+   - **Direct debit**:
+     - HTTP POST GoCardless **Create Billing Request** (`/billing_requests`) — mandate_request: `{ scheme: "becs", currency: "AUD" }`
+     - HTTP POST GoCardless **Create Billing Request Flow** (`/billing_request_flows`) — body에 `redirect_uri`, `exit_uri`, `links.billing_request`, `customer_details` (prefill from staging email/phone/address)
+     - **Update Staging** (Airtable PATCH): `gocardless_billing_request_id`, `gocardless_flow_url` 저장
+     - **Respond Redirect** (respondToWebhook, responseCode=302, responseHeaders=[{Location: flow.authorisation_url}], respondWith=text 빈 body)
+   - **Credit application**: 정적 HTML 응답 ("감사합니다. admin team이 1영업일 이내에 연락드립니다.")
+   - **COD**: 정적 HTML 응답 ("감사합니다. 주문 후 인보이스가 발행됩니다. 출하 전 bank transfer로 입금 부탁드립니다. 계좌: BSB ... / Account ...")
+   - **other/missing**: 정적 generic thank-you
+
+### GoCardless API 호출 spec
+
+**Create Billing Request** (POST `/billing_requests`):
+- Headers: `Authorization: Bearer <key>`, `GoCardless-Version: 2015-07-06`, `Content-Type: application/json`
+- Body: `{ billing_requests: { mandate_request: { scheme: "becs", currency: "AUD" } } }` (호주 BECS scheme)
+- Response: `{ billing_requests: { id, status, links: {...} } }` — `id` 캡처
+
+**Create Billing Request Flow** (POST `/billing_request_flows`):
+- Body: `{ billing_request_flows: { redirect_uri: "https://order.youngfoods.com.au/onboarding/complete?br={br_id}", exit_uri: "https://order.youngfoods.com.au/onboarding/cancelled", links: { billing_request: <id from above> }, customer_details: { email, given_name?, family_name?, ... }, prefilled_customer: {...} } }`
+- Response: `{ billing_request_flows: { id, authorisation_url, ... } }` — `authorisation_url` 캡처 (이게 redirect 대상)
+
+### 멱등성
+
+- 동일 `response_id` 재방문 시: staging row의 `gocardless_billing_request_id` 있으면 → BRT fetch → 만약 status 살아있으면 같은 flow URL로 redirect, 만료됐으면 새 BRT 생성. 보수적으로 매번 새 BRT 생성도 OK (Tally redirect는 보통 1회).
+- BRT는 single-use라 customer가 page 떠난 뒤 다시 click하면 보통 expired. 재실행 안전.
+
+### 에러 처리
+
+| 에러 | 동작 |
+| --- | --- |
+| Staging row 미존재 | 200 + 정적 HTML "Submission not found, please contact admin" |
+| GoCardless API 5xx | 200 + 정적 fallback HTML "DD 설정 일시 장애 — 환영 이메일로 재안내드립니다" + Slack `#ops-onboarding` 알림 |
+| Tally placeholder 미동작 (response_id 비어있음) | 422 + 정적 에러 페이지 |
+
+### 신설 필수 (운영 액션)
+
+- GoCardless 계정 + API key + n8n credential `gocardless-api-key`
+- Airtable `Onboarding Submissions` 컬럼: `gocardless_billing_request_id` (text), `gocardless_flow_url` (text)
+- Tally `Me75K8` redirectOnCompletionUrl 설정 (사용자 UI 작업)
+- (옵션) Tally placeholder `{response_id}` 또는 `{submission_id}` 동작 확인 — 미지원 시 URL 구조 다시 결정
+
+### 빌드 보류 사유
+
+- GoCardless credential 미등록 상태 → 사용자 손작업 후 별도 turn에서 skeleton 빌드.
+- Tally redirect placeholder 동작 확인 사용자 손작업.
+
+---
+
 ## 미결 사항 (이 도메인)
 
 | 항목 | 메모 |
 | --- | --- |
-| 남은 워크플로우 후보 | **모든 핵심 #1~#7 설계 완료** (2026-05-28). 추가 후보: #6c(이메일 복구 — order-site 정책상 phone OR email 모두 허용) — 운영 가동 후 수요 보고 결정 |
+| 남은 워크플로우 후보 | **모든 핵심 #0~#7 설계·빌드 완료**, #8 (DD Redirect handler) 설계 완료·빌드 보류 (GoCardless credential 등록 후). 추가 후보: #6c(이메일 복구 — order-site 정책상 phone OR email 모두 허용) — 운영 가동 후 수요 보고 결정 |
 | 신설 운영 액션 (#2.5·#5·#6·#7 가동 전) | (#7) Airtable `Onboarding Submissions` 테이블, HubSpot Company `Customer Group` property, HubSpot workflow on `Onboarding=approved` → webhook, Tally signing secret. (#6) Airtable `SMS Log` 테이블, ClickSend 계정·sender ID(YoungFoods) 등록, n8n `clicksend-creds` credential. (#2.5) Xero Branding theme에 회사 계좌(BSB·계좌번호) invoice footer/payment instructions 등록. (#5) HubSpot Company custom property `Hold Reason`·`Outstanding (AUD)` 신설 |
 | 각 ops-* 채널 ID 등록 | 채널은 만들어졌고 매핑 확정 — 워크플로우 구현 시점에 ID를 n8n 자격증명에 입력 |

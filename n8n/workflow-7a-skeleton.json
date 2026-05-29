@@ -132,20 +132,131 @@
       },
       "retryOnFail": true,
       "maxTries": 2,
-      "onError": "continueRegularOutput",
-      "notes": "TODO next-iter: associations/contacts → forward-guard email cross-check."
+      "onError": "continueRegularOutput"
     },
     {
-      "id": "node-decide-match-hubspot",
-      "name": "Decide Match (HubSpot branch)",
+      "id": "node-if-company-found",
+      "name": "IF Company Found",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2,
+      "position": [1380, 200],
+      "parameters": {
+        "conditions": {
+          "options": { "caseSensitive": true, "leftValue": "", "typeValidation": "loose" },
+          "combinator": "and",
+          "conditions": [
+            { "leftValue": "={{ $json.id }}", "rightValue": "", "operator": { "type": "string", "operation": "notEmpty", "singleValue": true } }
+          ]
+        },
+        "options": {}
+      },
+      "onError": "continueRegularOutput"
+    },
+    {
+      "id": "node-hubspot-get-associations",
+      "name": "HubSpot Get Associations",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [1560, 100],
+      "parameters": {
+        "method": "GET",
+        "url": "=https://api.hubapi.com/crm/v4/objects/companies/{{ $('Validate & Normalize').item.json.hubspot_id }}/associations/contacts",
+        "authentication": "predefinedCredentialType",
+        "nodeCredentialType": "hubspotAppToken",
+        "options": {}
+      },
+      "credentials": {
+        "hubspotAppToken": { "id": "o9u31xvDKlsBJcZO", "name": "HubSpot Private App (companies read)" }
+      },
+      "onError": "continueRegularOutput",
+      "retryOnFail": true,
+      "maxTries": 2
+    },
+    {
+      "id": "node-extract-contact-ids",
+      "name": "Extract Contact IDs",
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
-      "position": [1420, 320],
+      "position": [1740, 100],
       "parameters": {
         "language": "javaScript",
-        "jsCode": "const hubspotResp = $input.first().json;\nconst inErr = hubspotResp && hubspotResp.error;\nconst is404 = inErr && (inErr.httpCode === '404' || (inErr.message && inErr.message.includes('404')));\nconst matched = !inErr && hubspotResp && hubspotResp.id;\nreturn { json: {\n  matched_via: matched ? 'hubspot_id' : (is404 ? 'invalid_id' : 'lookup_error'),\n  hubspot_company_id: matched ? String(hubspotResp.id) : '',\n  matched_company_name: matched ? ((hubspotResp.properties && hubspotResp.properties.name) || '') : '',\n  forward_guard_flag: false\n} };"
+        "jsCode": "const resp = $input.first().json;\nconst results = (resp && resp.results) || [];\nconst contact_ids = results.map(r => String(r.toObjectId || (r.to && r.to.id) || r.id || '')).filter(Boolean);\nreturn { json: { contact_ids, has_contacts: contact_ids.length > 0 } };"
+      }
+    },
+    {
+      "id": "node-if-has-contacts",
+      "name": "IF Has Contacts",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2,
+      "position": [1920, 100],
+      "parameters": {
+        "conditions": {
+          "options": { "caseSensitive": true, "leftValue": "", "typeValidation": "loose" },
+          "combinator": "and",
+          "conditions": [
+            { "leftValue": "={{ $json.has_contacts }}", "rightValue": true, "operator": { "type": "boolean", "operation": "true", "singleValue": true } }
+          ]
+        },
+        "options": {}
       },
-      "notes": "TODO next-iter: forward-guard."
+      "onError": "continueRegularOutput"
+    },
+    {
+      "id": "node-hubspot-batch-read-contacts",
+      "name": "HubSpot Batch Read Contacts",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [2100, 60],
+      "parameters": {
+        "method": "POST",
+        "url": "https://api.hubapi.com/crm/v3/objects/contacts/batch/read",
+        "authentication": "predefinedCredentialType",
+        "nodeCredentialType": "hubspotAppToken",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({ inputs: ($('Extract Contact IDs').item.json.contact_ids || []).map(function(id){ return { id: id }; }), properties: ['email'] }) }}",
+        "options": {}
+      },
+      "credentials": {
+        "hubspotAppToken": { "id": "o9u31xvDKlsBJcZO", "name": "HubSpot Private App (companies read)" }
+      },
+      "onError": "continueRegularOutput",
+      "retryOnFail": true,
+      "maxTries": 2
+    },
+    {
+      "id": "node-forward-guard",
+      "name": "Forward Guard Check",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [2280, 60],
+      "parameters": {
+        "language": "javaScript",
+        "jsCode": "const batchResp = $input.first().json;\nconst v = $('Validate & Normalize').item.json;\nconst company = $('HubSpot Get Company').item.json;\nconst contacts = (batchResp && batchResp.results) || [];\nconst formEmail = (v.form_email || '').toLowerCase().trim();\nconst matchingContact = contacts.find(function(c){\n  const e = ((c.properties && c.properties.email) || '').toLowerCase().trim();\n  return e && e === formEmail;\n});\nconst forwardGuardOk = !!matchingContact;\nreturn { json: {\n  matched_via: forwardGuardOk ? 'hubspot_id' : 'hubspot_id_disputed',\n  hubspot_company_id: String(company.id || ''),\n  matched_company_name: (company.properties && company.properties.name) || '',\n  forward_guard_flag: !forwardGuardOk,\n  forward_guard_checked_contacts: contacts.length\n} };"
+      }
+    },
+    {
+      "id": "node-no-contacts-set",
+      "name": "No Contacts Set",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [2100, 200],
+      "parameters": {
+        "language": "javaScript",
+        "jsCode": "const company = $('HubSpot Get Company').item.json;\nreturn { json: {\n  matched_via: 'hubspot_id_disputed',\n  hubspot_company_id: String(company.id || ''),\n  matched_company_name: (company.properties && company.properties.name) || '',\n  forward_guard_flag: true,\n  forward_guard_checked_contacts: 0\n} };"
+      },
+      "notes": "No associated contacts to verify against → forward guard cannot pass."
+    },
+    {
+      "id": "node-set-invalid-id",
+      "name": "Set Invalid ID",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [1380, 400],
+      "parameters": {
+        "language": "javaScript",
+        "jsCode": "return { json: {\n  matched_via: 'invalid_id',\n  hubspot_company_id: '',\n  matched_company_name: '',\n  forward_guard_flag: false\n} };"
+      }
     },
     {
       "id": "node-decide-match-unmatched",
@@ -160,14 +271,6 @@
       "notes": "TODO next-iter: HubSpot Contact search by form_email fallback."
     },
     {
-      "id": "node-merge",
-      "name": "Merge Match Decision",
-      "type": "n8n-nodes-base.merge",
-      "typeVersion": 3,
-      "position": [1640, 420],
-      "parameters": { "mode": "combine", "combineBy": "combineAll", "options": {} }
-    },
-    {
       "id": "node-prepare-airtable-body",
       "name": "Prepare Airtable Body",
       "type": "n8n-nodes-base.code",
@@ -175,9 +278,8 @@
       "position": [1860, 420],
       "parameters": {
         "language": "javaScript",
-        "jsCode": "const m = $input.first().json;\nconst v = $('Validate & Normalize').item.json;\nconst now = new Date().toISOString();\nconst airtable_body = {\n  records: [{\n    fields: {\n      submission_id: v.submission_id,\n      tally_form_id: v.tally_form_id,\n      submitted_at: v.submitted_at,\n      hubspot_company_id: m.hubspot_company_id || '',\n      matched_via: m.matched_via,\n      forward_guard_flag: !!m.forward_guard_flag,\n      shop_name: v.shop_name,\n      entity_name: v.entity_name,\n      abn: v.abn_acn,\n      delivery_address: v.delivery_address,\n      form_email: v.form_email,\n      form_phone: v.form_phone,\n      account_contact_name: v.account_name,\n      account_contact_email: v.account_email,\n      account_contact_phone: v.account_phone,\n      payment_term_selection: v.payment_term_selection,\n      raw_payload_json: v.raw_payload_json,\n      status: 'under review',\n      created_at: now,\n      updated_at: now\n    }\n  }],\n  typecast: true\n};\nreturn { json: { airtable_body_str: JSON.stringify(airtable_body) } };"
-      },
-      "notes": "TODO: gocardless_mandate_id + Slack thread_ts."
+        "jsCode": "const m = $input.first().json;\nconst v = $('Validate & Normalize').item.json;\nconst now = new Date().toISOString();\nconst airtable_body = {\n  records: [{\n    fields: {\n      submission_id: v.submission_id,\n      tally_form_id: v.tally_form_id,\n      submitted_at: v.submitted_at,\n      hubspot_company_id: m.hubspot_company_id || '',\n      matched_via: m.matched_via,\n      forward_guard_flag: !!m.forward_guard_flag,\n      shop_name: v.shop_name,\n      entity_name: v.entity_name,\n      abn: v.abn_acn,\n      delivery_address: v.delivery_address,\n      form_email: v.form_email,\n      form_phone: v.form_phone,\n      account_contact_name: v.account_name,\n      account_contact_email: v.account_email,\n      account_contact_phone: v.account_phone,\n      payment_term_selection: v.payment_term_selection,\n      raw_payload_json: v.raw_payload_json,\n      status: 'under review',\n      created_at: now,\n      updated_at: now\n    }\n  }],\n  typecast: true\n};\nreturn { json: {\n  airtable_body_str: JSON.stringify(airtable_body),\n  matched_via: m.matched_via,\n  hubspot_company_id: m.hubspot_company_id || '',\n  forward_guard_flag: !!m.forward_guard_flag,\n  matched_company_name: m.matched_company_name || ''\n} };"
+      }
     },
     {
       "id": "node-create-airtable",
@@ -202,17 +304,114 @@
       "maxTries": 3
     },
     {
+      "id": "node-build-slack",
+      "name": "Build Slack Message",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [2300, 420],
+      "parameters": {
+        "language": "javaScript",
+        "jsCode": "const v = $('Validate & Normalize').item.json;\nconst p = $('Prepare Airtable Body').item.json;\nconst created = $('Create Airtable Submission').item.json;\nconst recordId = (created.records && created.records[0] && created.records[0].id) || '';\n\nconst matchEmoji = {\n  'hubspot_id': ':white_check_mark: HubSpot ID 매칭',\n  'hubspot_id_disputed': ':warning: forward 가드 의심 (email 불일치)',\n  'invalid_id': ':x: HubSpot Company 찾을 수 없음 (invalid ID)',\n  'lookup_error': ':rotating_light: HubSpot 조회 에러',\n  'unmatched': ':grey_question: 매칭 실패 (영업 판단 필요)'\n}[p.matched_via] || `:question: ${p.matched_via}`;\n\nconst lines = [\n  `*온보딩 폼 제출* — ${v.shop_name || '(상호 미입력)'}`,\n  matchEmoji,\n  p.matched_company_name ? `HubSpot Company: *${p.matched_company_name}* (id ${p.hubspot_company_id})` : null,\n  `Email: ${v.form_email} · Phone: ${v.form_phone}`,\n  `Payment: *${v.payment_term_selection || '(미선택)'}*${v.payment_term_selection === 'Credit application' ? ` · Term: ${v.credit_term} · Limit: ${v.credit_limit}` : ''}`,\n  v.legal_entity ? `Legal entity: ${v.legal_entity} · ABN/ACN: ${v.abn_acn}` : null,\n  `Airtable: https://airtable.com/appag4IfzpTeQPS1X/tblWrkl7mDixzbpTK/${recordId}`,\n  p.hubspot_company_id ? `HubSpot: https://app.hubspot.com/contacts/_/company/${p.hubspot_company_id}` : null\n].filter(Boolean);\n\nreturn { json: { slack_text: lines.join('\\n'), airtable_record_id: recordId } };"
+      }
+    },
+    {
+      "id": "node-slack-post",
+      "name": "Slack Post Message",
+      "type": "n8n-nodes-base.slack",
+      "typeVersion": 2.2,
+      "position": [2520, 420],
+      "parameters": {
+        "resource": "message",
+        "operation": "post",
+        "select": "channel",
+        "channelId": { "__rl": true, "value": "C0B42FWL8VA", "mode": "id", "cachedResultName": "ops-onboarding" },
+        "text": "={{ $json.slack_text }}",
+        "otherOptions": {}
+      },
+      "credentials": {
+        "slackApi": { "id": "NAh6hd7VFXGqksqK", "name": "Slack account" }
+      },
+      "onError": "continueRegularOutput",
+      "retryOnFail": true,
+      "maxTries": 2
+    },
+    {
+      "id": "node-update-submission-ts",
+      "name": "Update Submission Slack ts",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [2740, 420],
+      "parameters": {
+        "method": "PATCH",
+        "url": "=https://api.airtable.com/v0/appag4IfzpTeQPS1X/tblWrkl7mDixzbpTK/{{ $('Build Slack Message').item.json.airtable_record_id }}",
+        "authentication": "predefinedCredentialType",
+        "nodeCredentialType": "airtableTokenApi",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({ fields: { slack_thread_ts: ($json.ts || ''), updated_at: new Date().toISOString() }, typecast: true }) }}",
+        "options": {}
+      },
+      "credentials": {
+        "airtableTokenApi": { "id": "B2hRHQungck3WMoE", "name": "Airtable Personal Access Token account" }
+      },
+      "onError": "continueRegularOutput",
+      "retryOnFail": true,
+      "maxTries": 2
+    },
+    {
+      "id": "node-if-should-patch-hubspot",
+      "name": "IF Should PATCH HubSpot",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2,
+      "position": [2960, 420],
+      "parameters": {
+        "conditions": {
+          "options": { "caseSensitive": true, "leftValue": "", "typeValidation": "loose" },
+          "combinator": "and",
+          "conditions": [
+            { "leftValue": "={{ $('Prepare Airtable Body').item.json.matched_via }}", "rightValue": "hubspot_id", "operator": { "type": "string", "operation": "equals" } },
+            { "leftValue": "={{ $('Prepare Airtable Body').item.json.forward_guard_flag }}", "rightValue": false, "operator": { "type": "boolean", "operation": "false", "singleValue": true } }
+          ]
+        },
+        "options": {}
+      },
+      "onError": "continueRegularOutput"
+    },
+    {
+      "id": "node-hubspot-patch-onboarding",
+      "name": "HubSpot PATCH Onboarding",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [3180, 320],
+      "parameters": {
+        "method": "PATCH",
+        "url": "=https://api.hubapi.com/crm/v3/objects/companies/{{ $('Prepare Airtable Body').item.json.hubspot_company_id }}",
+        "authentication": "predefinedCredentialType",
+        "nodeCredentialType": "hubspotAppToken",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({ properties: { onboarding: 'form submitted' } }) }}",
+        "options": {}
+      },
+      "credentials": {
+        "hubspotAppToken": { "id": "o9u31xvDKlsBJcZO", "name": "HubSpot Private App (companies read)" }
+      },
+      "notes": "HubSpot 'onboarding' enum: form sent | form submitted | form reviewed | pending information | approved",
+      "onError": "continueRegularOutput",
+      "retryOnFail": true,
+      "maxTries": 2
+    },
+    {
       "id": "node-respond-success",
       "name": "Respond Success",
       "type": "n8n-nodes-base.respondToWebhook",
       "typeVersion": 1.1,
-      "position": [2300, 420],
+      "position": [3400, 420],
       "parameters": {
         "respondWith": "json",
         "responseBody": "={{ JSON.stringify({ status: 'received', submission_id: $('Validate & Normalize').item.json.submission_id, matched_via: $('Prepare Airtable Body').item.json && JSON.parse($('Prepare Airtable Body').item.json.airtable_body_str).records[0].fields.matched_via }) }}",
         "options": { "responseCode": 200 }
-      },
-      "notes": "TODO: HubSpot PATCH Onboarding=form submitted + Slack #ops-onboarding."
+      }
     }
   ],
   "connections": {
@@ -221,11 +420,22 @@
     "Search Existing Submission": { "main": [[{ "node": "IF Already Exists", "type": "main", "index": 0 }]] },
     "IF Already Exists": { "main": [[{ "node": "Respond Already Received", "type": "main", "index": 0 }], [{ "node": "IF Has HubSpot ID", "type": "main", "index": 0 }]] },
     "IF Has HubSpot ID": { "main": [[{ "node": "HubSpot Get Company", "type": "main", "index": 0 }], [{ "node": "Decide Match (unmatched)", "type": "main", "index": 0 }]] },
-    "HubSpot Get Company": { "main": [[{ "node": "Decide Match (HubSpot branch)", "type": "main", "index": 0 }]] },
-    "Decide Match (HubSpot branch)": { "main": [[{ "node": "Merge Match Decision", "type": "main", "index": 0 }]] },
-    "Decide Match (unmatched)": { "main": [[{ "node": "Merge Match Decision", "type": "main", "index": 1 }]] },
-    "Merge Match Decision": { "main": [[{ "node": "Prepare Airtable Body", "type": "main", "index": 0 }]] },
+    "HubSpot Get Company": { "main": [[{ "node": "IF Company Found", "type": "main", "index": 0 }]] },
+    "IF Company Found": { "main": [[{ "node": "HubSpot Get Associations", "type": "main", "index": 0 }], [{ "node": "Set Invalid ID", "type": "main", "index": 0 }]] },
+    "HubSpot Get Associations": { "main": [[{ "node": "Extract Contact IDs", "type": "main", "index": 0 }]] },
+    "Extract Contact IDs": { "main": [[{ "node": "IF Has Contacts", "type": "main", "index": 0 }]] },
+    "IF Has Contacts": { "main": [[{ "node": "HubSpot Batch Read Contacts", "type": "main", "index": 0 }], [{ "node": "No Contacts Set", "type": "main", "index": 0 }]] },
+    "HubSpot Batch Read Contacts": { "main": [[{ "node": "Forward Guard Check", "type": "main", "index": 0 }]] },
+    "Forward Guard Check": { "main": [[{ "node": "Prepare Airtable Body", "type": "main", "index": 0 }]] },
+    "No Contacts Set": { "main": [[{ "node": "Prepare Airtable Body", "type": "main", "index": 0 }]] },
+    "Set Invalid ID": { "main": [[{ "node": "Prepare Airtable Body", "type": "main", "index": 0 }]] },
+    "Decide Match (unmatched)": { "main": [[{ "node": "Prepare Airtable Body", "type": "main", "index": 0 }]] },
     "Prepare Airtable Body": { "main": [[{ "node": "Create Airtable Submission", "type": "main", "index": 0 }]] },
-    "Create Airtable Submission": { "main": [[{ "node": "Respond Success", "type": "main", "index": 0 }]] }
+    "Create Airtable Submission": { "main": [[{ "node": "Build Slack Message", "type": "main", "index": 0 }]] },
+    "Build Slack Message": { "main": [[{ "node": "Slack Post Message", "type": "main", "index": 0 }]] },
+    "Slack Post Message": { "main": [[{ "node": "Update Submission Slack ts", "type": "main", "index": 0 }]] },
+    "Update Submission Slack ts": { "main": [[{ "node": "IF Should PATCH HubSpot", "type": "main", "index": 0 }]] },
+    "IF Should PATCH HubSpot": { "main": [[{ "node": "HubSpot PATCH Onboarding", "type": "main", "index": 0 }], [{ "node": "Respond Success", "type": "main", "index": 0 }]] },
+    "HubSpot PATCH Onboarding": { "main": [[{ "node": "Respond Success", "type": "main", "index": 0 }]] }
   }
 }
