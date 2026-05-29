@@ -27,7 +27,7 @@ metadata:
 | Onboarding Submissions | `tblWrkl7mDixzbpTK` | → 고객 |
 | SMS Log | `tbljXGJsa4Wa7PCA6` | → 오더, → 고객 |
 
-> 스키마 출처: `airtable/schema.md`. n8n MCP가 base 작업 시 base/table ID 헷갈리지 않게 항상 여기 참조.
+> 스키마 출처: `airtable/schema.md` (2026-05-29부터 base/tableId 인라인 포함, 섹션 헤딩에도 박힘). `n8n/CLAUDE.md` "외부 리소스 ID 참조" 섹션에도 동일 표 + n8n credential ID 함께 정리. 이 메모리는 새 PC/세션 첫 진입 시 빠른 lookup용.
 
 ### MCP 한계로 UI 수동 작업 필요한 항목
 

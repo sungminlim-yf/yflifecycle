@@ -37,6 +37,16 @@ CLAUDE.md 흐름에 필요한 외부 서비스 MCP들. 모두 **local scope** (`
 ⚠️ 등록은 됐고 브라우저 OAuth 인증 대기:
 - **tally** — `claude mcp add --transport http tally https://api.tally.so/mcp`. `/mcp`에서 브라우저 인증 필요. (참고: 새로 추가한 HTTP 서버는 `/mcp` UI가 바로 안 잡을 수 있음 — 메시지 한 번 보낸 뒤 다시 열거나 세션 재시작.)
 
+**n8n 내부 credentials 인벤토리** (n8n.cloud 인스턴스, 2026-05-29):
+- `xero-custom-connection` (oAuth2Api) — Xero Custom Connection, [[xero-account]]
+- `HubSpot Private App (companies read)` (hubspotAppToken)
+- `Slack account` (slackApi, Bot 토큰)
+- `Airtable Personal Access Token account` (airtableTokenApi)
+- `Gmail OAuth2 API` (gmailOAuth2)
+- `clicksend-creds` (httpBasicAuth, id `WZGjzqhfPeU4PL4i`) — 2026-05-29 추가, 도메인 제한 `rest.clicksend.com`
+- 기타: Slack OAuth2 API, Header Auth account, OpenAI account, OpenWeatherMap account
+- 예정: `tally-webhook-secret` (signing secret 발급 후)
+
 **Slack 스코프 주의**: korotovsky 서버는 부팅 시 모든 대화 타입(public/private/mpim/im)을 강제 캐싱하므로 Bot 토큰에 `channels:read`+`groups:read`+`im:read`+`mpim:read`가 모두 필요(하나라도 없으면 missing_scope로 부팅 실패). 끄는 env 없음. 알림 발송 자체엔 `chat:write`만 필요.
 
 **설치 패턴 (재설치 시 참고)**

@@ -5,6 +5,26 @@
 
 ---
 
+## 베이스 + 테이블 ID (n8n·MCP 참조용)
+
+- **base 이름**: `yflifecycle`
+- **base ID**: `appag4IfzpTeQPS1X`
+
+| 테이블 | tableId | 주요 link |
+| --- | --- | --- |
+| 고객 | `tbl1kAgO2ISkSS3O6` | — |
+| 제품 | `tblaFB9HuIuocCV9s` | — |
+| 오더 | `tbliaikQUIRawfMU7` | → 고객 |
+| 라인아이템 | `tblVXVQzT1q8U0HJQ` | → 오더, → 제품 |
+| Production Schedule | `tblaEhgO4A20iFIge` | → 제품 |
+| Production Plan | `tblnDrv6ssyDgNufF` | → 제품 |
+| Onboarding Submissions | `tblWrkl7mDixzbpTK` | → 고객 |
+| SMS Log | `tbljXGJsa4Wa7PCA6` | → 오더, → 고객 |
+
+> 다른 base들(`young foods`·`youngfoodsnew`·`Sushi Ari`)은 이 프로젝트의 운영 source가 아님 — 헷갈리지 말 것.
+
+---
+
 ## 테이블 관계도 (개요)
 
 ```
@@ -19,7 +39,7 @@
 
 ---
 
-## 오더 테이블
+## 오더 테이블 — `tbliaikQUIRawfMU7`
 
 | 필드 | 타입 | 설명 |
 | --- | --- | --- |
@@ -42,7 +62,7 @@
 
 ---
 
-## 라인아이템 테이블
+## 라인아이템 테이블 — `tblVXVQzT1q8U0HJQ`
 
 - 오더(1) ──< 라인아이템(*) 구조. picking(피킹 리스트)·Xero 인보이스 line 매핑에 사용.
 - 필드: 오더(link), 제품(link → 제품 테이블), **수량(박스 수)**, **단가(박스 단가, 제품 lookup)**, **subtotal(formula = 박스 단가 × 수량)**
@@ -50,7 +70,7 @@
 
 ---
 
-## 제품 테이블 (SoT)
+## 제품 테이블 (SoT) — `tblaFB9HuIuocCV9s`
 
 - SKU / 품목명 / 단위 / **박스당 수량 (kg)** / **kg 단가 (현재 통일 $13)** / **박스 단가 (formula = kg 단가 × 박스 kg)** / MOQ / Xero Item Code
 - **생산계획 lookup 필드** (number, 박스 단위 — 상세 `production-planning.md`):
@@ -62,7 +82,7 @@
 
 ---
 
-## 생산계획 테이블 — `Production Plan` (forecast)
+## 생산계획 테이블 — `Production Plan` (forecast) — `tblnDrv6ssyDgNufF`
 
 - 행 = (SKU × 날짜) — 14일 × 3 SKU = **42행 rolling**. 토/일 포함 (production=0, dispatch=0).
 - 매일 마감 시 D0 행의 `stock_open` 실측 입력 → D+1~D+13는 formula로 자동 재계산.
@@ -86,7 +106,7 @@
 
 ---
 
-## 생산일정 테이블 — `Production Schedule`
+## 생산일정 테이블 — `Production Schedule` — `tblaEhgO4A20iFIge`
 
 - 행 = 영업일 1개 (월~금). 매주 1회 수동 입력 (담당자 ~15분).
 - 하루 1 SKU 제약을 구조적으로 강제.
@@ -103,7 +123,7 @@
 
 ---
 
-## 고객 테이블 (매핑 허브)
+## 고객 테이블 (매핑 허브) — `tbl1kAgO2ISkSS3O6`
 
 - **HubSpot 고객 ID + Xero ContactID + 매직/복구 토큰** (매핑 허브 키)
 - 상호 / 담당자 / 이메일 / 연락처 / 기본 배송지 / payment term
@@ -114,7 +134,7 @@
 
 ---
 
-## SMS 로그 테이블 — `SMS Log`
+## SMS 로그 테이블 — `SMS Log` — `tbljXGJsa4Wa7PCA6`
 
 > **역할**: ClickSend로 발송한 모든 SMS 기록. #6a(주문 확인) 멱등 키, #6b(분실 복구) rate limit 카운트 source, 운영 감사·디버깅. 영구 보관.
 
@@ -138,7 +158,7 @@
 
 ---
 
-## 온보딩 신청 테이블 — `Onboarding Submissions` (staging)
+## 온보딩 신청 테이블 — `Onboarding Submissions` (staging) — `tblWrkl7mDixzbpTK`
 
 > **역할**: Tally 폼 제출 ~ 영업 승인 사이의 staging. n8n #7a가 생성, 영업이 review, #7b가 승인 후 고객 테이블로 propagate. 운영 가시화 + 멱등 키 보관 + 매칭 실패·forward 오염 케이스 처리 흔적.
 

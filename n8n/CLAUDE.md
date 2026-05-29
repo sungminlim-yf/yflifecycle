@@ -15,6 +15,41 @@
 
 ---
 
+## 외부 리소스 ID 참조 (워크플로우 빌드용)
+
+> 워크플로우 노드 설정 시 이 값들을 직접 사용한다. 변경되면 이 표를 단일 진실로 갱신.
+
+### Airtable
+
+- **base 이름**: `yflifecycle` / **base ID**: `appag4IfzpTeQPS1X`
+- 테이블 ID 전체 + 필드 상세는 `../airtable/schema.md` "베이스 + 테이블 ID" 섹션. 워크플로우 빈도 순:
+
+| 테이블 | tableId | 주로 쓰는 워크플로우 |
+| --- | --- | --- |
+| 오더 | `tbliaikQUIRawfMU7` | #1, #2, #2.5, #3 |
+| 라인아이템 | `tblVXVQzT1q8U0HJQ` | #1, #2, #2.5 |
+| 제품 | `tblaFB9HuIuocCV9s` | #1 (가격 lookup), #2, #2.5 |
+| 고객 | `tbl1kAgO2ISkSS3O6` | #3, #5, #6b, #7b |
+| SMS Log | `tbljXGJsa4Wa7PCA6` | #6a, #6b |
+| Onboarding Submissions | `tblWrkl7mDixzbpTK` | #7a, #7b |
+| Production Schedule | `tblaEhgO4A20iFIge` | (운영 입력, 워크플로우 트리거 X) |
+| Production Plan | `tblnDrv6ssyDgNufF` | (lookup 자동, 워크플로우 트리거 X) |
+
+### n8n credentials (인스턴스 = `youngfoods.app.n8n.cloud`)
+
+| credential | type | id | 용도 |
+| --- | --- | --- | --- |
+| `clicksend-creds` | httpBasicAuth | `WZGjzqhfPeU4PL4i` | #6a, #6b (도메인 제한 `rest.clicksend.com`) |
+| `xero-custom-connection` | oAuth2Api | `98R0oS6cSE9DtxYP` | #2, #2.5, #3, #5 (Custom Connection client credentials) |
+| `HubSpot Private App (companies read)` | hubspotAppToken | `o9u31xvDKlsBJcZO` | #5, #7a, #7b |
+| `Airtable Personal Access Token account` | airtableTokenApi | `B2hRHQungck3WMoE` | 전 워크플로우 |
+| `Slack account` | slackApi | `NAh6hd7VFXGqksqK` | 예외·운영 알림 (`#ops-*`) |
+| `Gmail OAuth2 API` | gmailOAuth2 | `SycEHwXNU8mv9tYf` | (예비) |
+| `Tally account` | tallyApi | `sLfpnRidgWIwFqHe` | (예비 — #7a는 Tally → n8n webhook 수신이라 직접 불필요) |
+| `tally-webhook-secret` | _예정_ | _미생성_ | #7a HMAC 검증 (사용자가 Tally signing secret 발급 후) |
+
+---
+
 ## 전체 연동 지점 (flow 현황)
 
 | 출발 | 도착 | 내용 | 트리거(안) |

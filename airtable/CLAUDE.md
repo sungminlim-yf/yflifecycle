@@ -67,6 +67,6 @@ Airtable 고객 레코드 (내부 단일 진실)
 
 | 파일 | 내용 |
 | --- | --- |
-| `schema.md` | 오더·라인아이템·제품·고객 테이블의 필드·관계(link)·뷰 |
+| `schema.md` | 오더·라인아이템·제품·고객 테이블의 필드·관계(link)·뷰 + **base/table ID** (n8n 빌드 참조) |
 | `production-planning.md` | 생산계획·재고예측 모듈 (Make-to-stock) |
 | `products.md` | 사람용 제품 스냅샷 (SoT = 제품 테이블) |

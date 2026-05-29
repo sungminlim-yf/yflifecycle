@@ -1,0 +1,461 @@
+{
+  "name": "WF #1: Order Intake → Airtable (skeleton)",
+  "nodes": [
+    {
+      "id": "node-webhook",
+      "name": "Webhook",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2.1,
+      "position": [100, 400],
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "yf-order-intake-v1",
+        "authentication": "headerAuth",
+        "responseMode": "responseNode",
+        "options": {}
+      },
+      "credentials": {
+        "httpHeaderAuth": {
+          "id": "dY4EiGLUEsseUd4h",
+          "name": "order-intake-token"
+        }
+      },
+      "webhookId": "wf1-order-intake-v1",
+      "onError": "continueRegularOutput"
+    },
+    {
+      "id": "node-validate",
+      "name": "Validate Input",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [320, 400],
+      "parameters": {
+        "language": "javaScript",
+        "jsCode": "const raw = $input.first().json;\nconst body = raw.body || raw;\nconst errors = [];\nconst mode = body.mode;\nif (!['magic_link', 'guest'].includes(mode)) errors.push('mode_invalid');\nif (!body.client_idempotency_key || !/^[0-9a-f-]{36}$/i.test(body.client_idempotency_key)) errors.push('idempotency_key_invalid');\nif (!Array.isArray(body.lines) || body.lines.length === 0) errors.push('lines_empty');\nif (!body.requested_delivery_date) errors.push('delivery_date_missing');\nif (mode === 'magic_link' && !body.token) errors.push('token_missing');\nif (mode === 'guest') {\n  if (!body.store_name) errors.push('store_name_missing');\n  if (!body.contact_phone) errors.push('phone_missing');\n  if (!body.delivery_address) errors.push('address_missing');\n}\nif (Array.isArray(body.lines)) {\n  body.lines.forEach((line, idx) => {\n    if (!line.sku) errors.push('lines[' + idx + '].sku_missing');\n    if (!Number.isInteger(line.quantity_boxes) || line.quantity_boxes < 1) errors.push('lines[' + idx + '].quantity_invalid');\n  });\n}\n\nconst ok = errors.length === 0;\nconst skuList = Array.isArray(body.lines) ? body.lines.map(l => l.sku).filter(Boolean) : [];\nconst esc = (s) => String(s).replace(/\"/g, '\\\\\"');\nconst skuClauses = skuList.map(s => '{SKU}=\"' + esc(s) + '\"');\nconst skuFilter = skuClauses.length === 0 ? 'FALSE()' : (skuClauses.length === 1 ? skuClauses[0] : 'OR(' + skuClauses.join(',') + ')');\nconst tokenForLookup = mode === 'magic_link' ? body.token : '__GUEST_NO_TOKEN__';\n\nreturn [{\n  json: {\n    ok,\n    errors,\n    body,\n    mode,\n    client_idempotency_key: body.client_idempotency_key,\n    sku_filter_formula: skuFilter,\n    customer_token: tokenForLookup,\n    requested_delivery_date: body.requested_delivery_date\n  }\n}];"
+      }
+    },
+    {
+      "id": "node-if-validate",
+      "name": "IF Validate Pass",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.3,
+      "position": [540, 400],
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "id": "v1",
+              "leftValue": "={{ $json.ok }}",
+              "rightValue": true,
+              "operator": {
+                "type": "boolean",
+                "operation": "true",
+                "singleValue": true
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      }
+    },
+    {
+      "id": "node-respond-invalid",
+      "name": "Respond Invalid",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.5,
+      "position": [760, 600],
+      "parameters": {
+        "respondWith": "json",
+        "responseCode": 422,
+        "responseBody": "={{ JSON.stringify({ ok: false, error_code: 'validation_failed', errors: $json.errors }) }}",
+        "options": {}
+      }
+    },
+    {
+      "id": "node-search-dedupe",
+      "name": "Search Order Dedupe",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.4,
+      "position": [760, 280],
+      "parameters": {
+        "method": "GET",
+        "url": "https://api.airtable.com/v0/appag4IfzpTeQPS1X/tbliaikQUIRawfMU7",
+        "authentication": "predefinedCredentialType",
+        "nodeCredentialType": "airtableTokenApi",
+        "sendQuery": true,
+        "queryParameters": {
+          "parameters": [
+            {
+              "name": "filterByFormula",
+              "value": "={{ '{client_idempotency_key}=\"' + $json.client_idempotency_key + '\"' }}"
+            },
+            {
+              "name": "maxRecords",
+              "value": "1"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "credentials": {
+        "airtableTokenApi": {
+          "id": "B2hRHQungck3WMoE",
+          "name": "Airtable Personal Access Token account"
+        }
+      }
+    },
+    {
+      "id": "node-if-dedupe",
+      "name": "IF Dedupe Empty",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.3,
+      "position": [980, 280],
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "loose",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "id": "d1",
+              "leftValue": "={{ $json.records.length }}",
+              "rightValue": 0,
+              "operator": {
+                "type": "number",
+                "operation": "equals"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      }
+    },
+    {
+      "id": "node-respond-existing",
+      "name": "Respond Existing",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.5,
+      "position": [1200, 480],
+      "parameters": {
+        "respondWith": "json",
+        "responseCode": 200,
+        "responseBody": "={{ JSON.stringify({ ok: true, status: 'duplicate_idempotent', order_no: $json.records[0].fields['주문번호'], airtable_record_id: $json.records[0].id }) }}",
+        "options": {}
+      }
+    },
+    {
+      "id": "node-search-products",
+      "name": "Search Products",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.4,
+      "position": [1200, 200],
+      "parameters": {
+        "method": "GET",
+        "url": "https://api.airtable.com/v0/appag4IfzpTeQPS1X/tblaFB9HuIuocCV9s",
+        "authentication": "predefinedCredentialType",
+        "nodeCredentialType": "airtableTokenApi",
+        "sendQuery": true,
+        "queryParameters": {
+          "parameters": [
+            {
+              "name": "filterByFormula",
+              "value": "={{ $('Validate Input').json.sku_filter_formula }}"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "credentials": {
+        "airtableTokenApi": {
+          "id": "B2hRHQungck3WMoE",
+          "name": "Airtable Personal Access Token account"
+        }
+      }
+    },
+    {
+      "id": "node-compute",
+      "name": "Compute & MOQ",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [1420, 200],
+      "parameters": {
+        "language": "javaScript",
+        "jsCode": "const products = ($input.first().json.records || []).map(r => ({ id: r.id, fields: r.fields }));\nconst v = $('Validate Input').json;\nconst body = v.body;\n\nconst bySku = {};\nproducts.forEach(p => {\n  const sku = p.fields['SKU'];\n  bySku[sku] = {\n    id: p.id,\n    sku,\n    name: p.fields['품목명'],\n    unit_price: p.fields['박스 단가'],\n    xero_item_code: p.fields['Xero Item Code']\n  };\n});\n\nconst priced = body.lines.map(l => {\n  const m = bySku[l.sku];\n  if (!m) return { sku: l.sku, quantity_boxes: l.quantity_boxes, error: 'unknown_sku' };\n  return {\n    sku: l.sku,\n    product_id: m.id,\n    name: m.name,\n    xero_item_code: m.xero_item_code,\n    quantity_boxes: l.quantity_boxes,\n    unit_price: m.unit_price,\n    line_subtotal: Math.round(m.unit_price * l.quantity_boxes * 100) / 100\n  };\n});\n\nconst unknown = priced.filter(l => l.error);\nif (unknown.length > 0) {\n  return [{ json: { ok: false, error_code: 'unknown_sku', status_code: 422, unknown_skus: unknown.map(l => l.sku), body, mode: v.mode } }];\n}\n\nconst subtotal = Math.round(priced.reduce((s, l) => s + l.line_subtotal, 0) * 100) / 100;\nconst MOQ = 150;\nconst moqPass = subtotal >= MOQ;\n\nreturn [{\n  json: {\n    ok: moqPass,\n    error_code: moqPass ? null : 'below_moq',\n    status_code: moqPass ? 200 : 422,\n    moq_minimum: MOQ,\n    subtotal,\n    lines: priced,\n    body,\n    mode: v.mode,\n    client_idempotency_key: v.client_idempotency_key,\n    customer_token: v.customer_token,\n    requested_delivery_date: v.requested_delivery_date\n  }\n}];"
+      }
+    },
+    {
+      "id": "node-if-moq",
+      "name": "IF MOQ Pass",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.3,
+      "position": [1640, 200],
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "id": "m1",
+              "leftValue": "={{ $json.ok }}",
+              "rightValue": true,
+              "operator": {
+                "type": "boolean",
+                "operation": "true",
+                "singleValue": true
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      }
+    },
+    {
+      "id": "node-respond-moq",
+      "name": "Respond MOQ Fail",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.5,
+      "position": [1860, 380],
+      "parameters": {
+        "respondWith": "json",
+        "responseCode": 422,
+        "responseBody": "={{ JSON.stringify({ ok: false, error_code: $json.error_code, minimum: $json.moq_minimum || 150, current: $json.subtotal || 0, unknown_skus: $json.unknown_skus || [] }) }}",
+        "options": {}
+      }
+    },
+    {
+      "id": "node-search-customer",
+      "name": "Search Customer",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.4,
+      "position": [1860, 120],
+      "parameters": {
+        "method": "GET",
+        "url": "https://api.airtable.com/v0/appag4IfzpTeQPS1X/tbl1kAgO2ISkSS3O6",
+        "authentication": "predefinedCredentialType",
+        "nodeCredentialType": "airtableTokenApi",
+        "sendQuery": true,
+        "queryParameters": {
+          "parameters": [
+            {
+              "name": "filterByFormula",
+              "value": "={{ '{매직 토큰}=\"' + $json.customer_token + '\"' }}"
+            },
+            {
+              "name": "maxRecords",
+              "value": "1"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "credentials": {
+        "airtableTokenApi": {
+          "id": "B2hRHQungck3WMoE",
+          "name": "Airtable Personal Access Token account"
+        }
+      }
+    },
+    {
+      "id": "node-prepare-order",
+      "name": "Prepare Order",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [2080, 120],
+      "parameters": {
+        "language": "javaScript",
+        "jsCode": "const customerSearch = $input.first().json;\nconst compute = $('Compute & MOQ').json;\nconst body = compute.body;\nconst mode = compute.mode;\nconst customer = (customerSearch.records || [])[0];\n\nif (mode === 'magic_link' && !customer) {\n  return [{ json: { ok: false, error_code: 'token_invalid', status_code: 401, lines: compute.lines, subtotal: compute.subtotal } }];\n}\n\nconst customerFields = customer ? customer.fields : {};\nconst customerId = customer ? customer.id : null;\n\nconst order_fields = {\n  'client_idempotency_key': compute.client_idempotency_key,\n  '고객 상태': customerId ? '등록완료' : '미배정',\n  '출하 상태': '접수',\n  '결제 상태': '미결제',\n  'requested_delivery_date': compute.requested_delivery_date,\n  '상호': customerId ? (customerFields['상호'] || '') : (body.store_name || ''),\n  '연락처': customerId ? (customerFields['연락처'] || '') : (body.contact_phone || ''),\n  '기본 배송지': customerId ? (customerFields['기본 배송지'] || '') : (body.delivery_address || ''),\n  '이번 주문 배송지': body.delivery_override_address || ''\n};\n\nif (customerId) {\n  order_fields['고객'] = [customerId];\n  const pt = customerFields['Payment term'];\n  if (pt) order_fields['Payment term'] = pt;\n}\n\nreturn [{\n  json: {\n    ok: true,\n    order_fields,\n    lines: compute.lines,\n    subtotal: compute.subtotal,\n    customer_id: customerId,\n    customer_name: customerFields['상호'] || body.store_name || ''\n  }\n}];"
+      }
+    },
+    {
+      "id": "node-if-customer",
+      "name": "IF Customer OK",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.3,
+      "position": [2300, 120],
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "id": "c1",
+              "leftValue": "={{ $json.ok }}",
+              "rightValue": true,
+              "operator": {
+                "type": "boolean",
+                "operation": "true",
+                "singleValue": true
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      }
+    },
+    {
+      "id": "node-respond-token-invalid",
+      "name": "Respond Token Invalid",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.5,
+      "position": [2520, 300],
+      "parameters": {
+        "respondWith": "json",
+        "responseCode": 401,
+        "responseBody": "={{ JSON.stringify({ ok: false, error_code: 'token_invalid', message: 'Magic link is invalid or revoked. Request a new one.' }) }}",
+        "options": {}
+      }
+    },
+    {
+      "id": "node-create-order",
+      "name": "Create Order",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.4,
+      "position": [2520, 40],
+      "parameters": {
+        "method": "POST",
+        "url": "https://api.airtable.com/v0/appag4IfzpTeQPS1X/tbliaikQUIRawfMU7",
+        "authentication": "predefinedCredentialType",
+        "nodeCredentialType": "airtableTokenApi",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({ fields: $json.order_fields, typecast: true }) }}",
+        "options": {}
+      },
+      "credentials": {
+        "airtableTokenApi": {
+          "id": "B2hRHQungck3WMoE",
+          "name": "Airtable Personal Access Token account"
+        }
+      }
+    },
+    {
+      "id": "node-prepare-lineitems",
+      "name": "Prepare Line Items",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [2740, 40],
+      "parameters": {
+        "language": "javaScript",
+        "jsCode": "const created = $input.first().json;\nconst orderId = created.id;\nconst orderNo = (created.fields || {})['주문번호'];\nconst prep = $('Prepare Order').json;\nconst lines = prep.lines;\nconst compute = $('Compute & MOQ').json;\n\nconst recordsBody = {\n  records: lines.map(l => ({\n    fields: {\n      'label': (orderNo ? ('ORD-' + orderNo) : 'ORD-?') + '-' + (l.xero_item_code || l.sku.slice(0, 3)),\n      '오더': [orderId],\n      '제품': [l.product_id],\n      '수량': l.quantity_boxes,\n      '단가': l.unit_price\n    }\n  })),\n  typecast: true\n};\n\nreturn [{\n  json: {\n    order_id: orderId,\n    order_no: orderNo,\n    records_body: recordsBody,\n    lines,\n    subtotal: compute.subtotal,\n    requested_delivery_date: compute.requested_delivery_date,\n    customer_id: prep.customer_id\n  }\n}];"
+      }
+    },
+    {
+      "id": "node-create-lineitems",
+      "name": "Create Line Items",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.4,
+      "position": [2960, 40],
+      "parameters": {
+        "method": "POST",
+        "url": "https://api.airtable.com/v0/appag4IfzpTeQPS1X/tblVXVQzT1q8U0HJQ",
+        "authentication": "predefinedCredentialType",
+        "nodeCredentialType": "airtableTokenApi",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify($json.records_body) }}",
+        "options": {}
+      },
+      "credentials": {
+        "airtableTokenApi": {
+          "id": "B2hRHQungck3WMoE",
+          "name": "Airtable Personal Access Token account"
+        }
+      }
+    },
+    {
+      "id": "node-respond-success",
+      "name": "Respond Success",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.5,
+      "position": [3180, 40],
+      "parameters": {
+        "respondWith": "json",
+        "responseCode": 200,
+        "responseBody": "={{ JSON.stringify({ ok: true, order_no: $('Prepare Line Items').json.order_no, order_id: $('Prepare Line Items').json.order_id, status: 'received', requested_delivery_date: $('Prepare Line Items').json.requested_delivery_date, subtotal: $('Prepare Line Items').json.subtotal, delivery_fee_preview: ($('Prepare Line Items').json.subtotal < 300 ? 5 : 0), lines: $('Prepare Line Items').json.lines.map(l => ({ sku: l.sku, quantity_boxes: l.quantity_boxes, unit_price: l.unit_price, line_subtotal: l.line_subtotal })) }) }}",
+        "options": {}
+      }
+    }
+  ],
+  "connections": {
+    "Webhook": {
+      "main": [[{ "node": "Validate Input", "type": "main", "index": 0 }]]
+    },
+    "Validate Input": {
+      "main": [[{ "node": "IF Validate Pass", "type": "main", "index": 0 }]]
+    },
+    "IF Validate Pass": {
+      "main": [
+        [{ "node": "Search Order Dedupe", "type": "main", "index": 0 }],
+        [{ "node": "Respond Invalid", "type": "main", "index": 0 }]
+      ]
+    },
+    "Search Order Dedupe": {
+      "main": [[{ "node": "IF Dedupe Empty", "type": "main", "index": 0 }]]
+    },
+    "IF Dedupe Empty": {
+      "main": [
+        [{ "node": "Search Products", "type": "main", "index": 0 }],
+        [{ "node": "Respond Existing", "type": "main", "index": 0 }]
+      ]
+    },
+    "Search Products": {
+      "main": [[{ "node": "Compute & MOQ", "type": "main", "index": 0 }]]
+    },
+    "Compute & MOQ": {
+      "main": [[{ "node": "IF MOQ Pass", "type": "main", "index": 0 }]]
+    },
+    "IF MOQ Pass": {
+      "main": [
+        [{ "node": "Search Customer", "type": "main", "index": 0 }],
+        [{ "node": "Respond MOQ Fail", "type": "main", "index": 0 }]
+      ]
+    },
+    "Search Customer": {
+      "main": [[{ "node": "Prepare Order", "type": "main", "index": 0 }]]
+    },
+    "Prepare Order": {
+      "main": [[{ "node": "IF Customer OK", "type": "main", "index": 0 }]]
+    },
+    "IF Customer OK": {
+      "main": [
+        [{ "node": "Create Order", "type": "main", "index": 0 }],
+        [{ "node": "Respond Token Invalid", "type": "main", "index": 0 }]
+      ]
+    },
+    "Create Order": {
+      "main": [[{ "node": "Prepare Line Items", "type": "main", "index": 0 }]]
+    },
+    "Prepare Line Items": {
+      "main": [[{ "node": "Create Line Items", "type": "main", "index": 0 }]]
+    },
+    "Create Line Items": {
+      "main": [[{ "node": "Respond Success", "type": "main", "index": 0 }]]
+    }
+  },
+  "settings": {
+    "executionOrder": "v1",
+    "saveDataSuccessExecution": "all",
+    "saveManualExecutions": true
+  }
+}

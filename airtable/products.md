@@ -9,11 +9,13 @@
 
 ## 품목 목록 (냉동 제품 3종)
 
-| SKU (= 바코드)       | 약칭     | 품목명                      | 단위(박스 순중량) | 박스당 수량            | 박스 단가 (AUD) | Xero Item Code |
-| -------------------- | -------- | --------------------------- | ----------------- | ---------------------- | --------------- | -------------- |
-| `KATSNCP1P2MKBRBKV1` | KATSU    | Golden Panko Chicken Cutlet | 6kg / 박스        | 30조각 (개당 약 200g)  | $78.00          | `KAT`          |
-| `GARSNCP1P2MGTHBKV1` | KARAAGE  | Crispy Chicken Bites        | 8kg / 박스 (2 × 4kg bag) | 50 servings (2 × 25)   | $104.00         | `GAR`          |
-| `TERSNCP300MTTHBKV1` | TERIYAKI | Pre-Cooked Chicken Thigh    | 8kg / 박스 (2 × 4kg bag) | 50 servings (2 × 25)   | $104.00         | `TER`          |
+| SKU (= 바코드)       | 약칭     | 품목명                      | 단위(박스 순중량) | 박스당 수량            | 박스 단가 (AUD) | Xero Item Code | Airtable record ID |
+| -------------------- | -------- | --------------------------- | ----------------- | ---------------------- | --------------- | -------------- | --- |
+| `KATSNCP1P2MKBRBKV1` | KATSU    | Golden Panko Chicken Cutlet | 6kg / 박스        | 30조각 (개당 약 200g)  | $78.00          | `KAT`          | `recKAV446g9hwsymE` |
+| `GARSNCP1P2MGTHBKV1` | KARAAGE  | Crispy Chicken Bites        | 8kg / 박스 (2 × 4kg bag) | 50 servings (2 × 25)   | $104.00         | `GAR`          | `recSpIZqWHvFkXM8l` |
+| `TERSNCP300MTTHBKV1` | TERIYAKI | Pre-Cooked Chicken Thigh    | 8kg / 박스 (2 × 4kg bag) | 50 servings (2 × 25)   | $104.00         | `TER`          | `recBEjmZvvNB040Ao` |
+
+> **Airtable 등록 완료**: 2026-05-29. record ID는 라인아이템 link·n8n 워크플로우 lookup에서 사용. `target_stock`·`safety_stock`·`default_dispatch_per_day` 3 lookup 필드는 영업·생산 협의 후 채움 (현재 9개 모두 blank).
 
 > **SKU = 바코드 전체 문자열**(회사 공식 SKU). 약칭은 화면 표시·대화용 별칭일 뿐 키 아님.
 > **Xero Item Code = SKU 바코드 앞 3자**. 짧고 인보이스 라인에서 한눈에 보이며, 박스 사이즈가 바뀌어도 코드는 안정. 무게·박스 단가는 Xero **Item description / Sales price** 필드로 관리. (2026-05-28 확정)

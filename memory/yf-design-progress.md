@@ -9,7 +9,7 @@ metadata:
 
 설계 단계 v0.4+ (2026-05-28 갱신). 도메인별 폴더 + 각 폴더 CLAUDE.md 구조 (`onboarding/`, `order-site/`, `airtable/`, `xero/`, `n8n/`). 루트 `CLAUDE.md`가 라우터·대시보드 — 잠긴 결정·미결은 거기에 정리되어 있어 그쪽을 single source로 참조.
 
-**현재 phase = 운영 액션 집행 중 (5/9 완료, 2026-05-28 밤)**. 자세한 진행상황은 아래 "운영 액션 진행 현황" 섹션.
+**현재 phase = 운영 액션 집행 중 (8/9 완료, 2026-05-29 오전)**. **n8n 워크플로우 #1 skeleton 빌드 완료** (id `twZw1wv3Fc1iJdeO`, inactive). 자세한 진행상황은 아래 "운영 액션 진행 현황" 섹션.
 
 설계 닫힌 영역: order-site UX, 가격/할인/배송비/DD, 온보딩 폼, **n8n 워크플로우 #1~#7 전부 (#2.5·#5 포함)**, **MOQ($150 grand subtotal), 배송비($5+GST, OUTPUT 10%), Xero Item Code(KAT/GAR/TER), Slack ops-* 매핑** (2026-05-28 추가 closure). #2.5는 Airtable trigger + payment term 필터 패턴(#1 결합 X), 결제 채널 = manual bank transfer, COD는 "주문 후 빠른 선결제 변형". **#5 (재무→HubSpot 공유)**: Airtable 고객 change trigger → HubSpot 3-property(Account Hold·Hold Reason·Outstanding) PATCH, 멱등 비교 skip, 확장 항목(overdue·credit limit·last payment)은 운영 시작 후 보강. `xero/` 도메인 미결 모두 해소. **`airtable/production-planning.md` v1 작성 + `schema.md`에 Production Plan/Schedule 2 테이블 + 제품 lookup 3필드 반영** (2026-05-28 추가). #3는 INVOICE.UPDATE webhook + 매시간 polling, #4(credit limit) #3에 통합. **온보딩 폼 #7 a/b 분할 설계 완료 (2026-05-28)**: #7a Tally webhook → 매칭(+forward 가드) → Airtable `Onboarding Submissions` staging → HubSpot Onboarding=form submitted → Slack. 영업 review에서 `Customer Group`(신설 HubSpot Company property) 지정 + Onboarding=approved. #7b HubSpot workflow webhook → Xero Contact 생성(discount % 그룹 기반) → Airtable 고객 행 + 토큰 발급 → 미배정 소급매칭 후보 Slack → 환영 이메일. 영업·고객·어드민 단일 진입 패턴 유지.
 
@@ -24,15 +24,20 @@ Xero 환경 확보 + Item 3개 등록 완료 ($78/$104/$104, EXEMPTOUTPUT) ([[xe
    - `customer_group` (enumeration: 내부고객/일반고객) — #7b가 Xero discount % 산정 source
    - `hold_reason` (text) — #5가 동기
    - `outstanding_aud` (number, AUD) — #5가 동기
+3. **ClickSend 계정 + API key 발급 + 알파태그 `YoungFoods` 신청** (2026-05-29 아침, 사용자). 승인 ~24h 대기 중 (목표 2026-05-30).
+4. **n8n `clicksend-creds` (httpBasicAuth) 등록 완료** — id `WZGjzqhfPeU4PL4i`, user = sungmin.lim@youngfoods.com.au, 도메인 제한 `rest.clicksend.com`. API key 본문은 n8n에만 보관 (git 메모리엔 미저장).
+5. **schema.md + n8n/CLAUDE.md에 base/tableId 인라인 박기 완료** (2026-05-29). schema.md = top 표 + 각 섹션 헤딩 인라인. n8n/CLAUDE.md = "외부 리소스 ID 참조" 섹션에 Airtable + n8n credential ID 7개. 워크플로우 빌드 lookup 단일화.
+6. **제품 3 SKU 행 Airtable 입력 완료** (2026-05-29). record ID: KAT `recKAV446g9hwsymE` ($78), GAR `recSpIZqWHvFkXM8l` ($104), TER `recBEjmZvvNB040Ao` ($104). 박스 단가 formula 검증 통과. lookup 3필드(target/safety/default_dispatch)는 미결 blank.
+7. **n8n 워크플로우 #1 skeleton 빌드 완료** (2026-05-29). id `twZw1wv3Fc1iJdeO`, 19 노드, **inactive**. Webhook(headerAuth=`order-intake-token` id `dY4EiGLUEsseUd4h`) → Validate Input → IF → Search Order Dedupe → IF → Search Products → Compute & MOQ → IF → Search Customer → Prepare Order → IF → Create Order → Prepare Line Items → Create Line Items → Respond Success. 4개 error response 노드(Invalid/Existing/MOQ/Token Invalid). Airtable는 HTTP Request 노드로 API 직접 호출(resourceMapper 회피). 워크플로우 JSON 원본은 `n8n/workflow-1-skeleton.json`. **stub/미구현**: 컷오프 검증, 중복 의심 Slack, 게스트 Slack 알림, SMS sub-workflow(#6a 미존재), 부분 실패 복구. n8n validate runtime profile: 0 errors / 16 warnings(false positive 위주).
 
-### ⏳ 남음 (사용자 UI 작업, 4개)
-3. **HubSpot Workflow**: Company `Onboarding` property가 `approved`로 변경 → "Send a webhook" action → n8n #7b URL (POST, Company ID 포함). 자동화 메뉴에서.
-4. **ClickSend**: 가입 → SMS Sender IDs에서 alphanumeric `YoungFoods` 등록 신청 (호주 사전 승인 1~2일) → API Credentials에서 username + API key 발급. **가장 일찍 시작 권장 (승인 lag)**.
-5. **Tally**: 온보딩 폼 Integrations → Webhooks → signing secret 활성화·복사. (폼 자체가 아직 없으면 폼 먼저 만들어야 함 — Tally MCP로 가능)
-6. **Xero**: Settings → Invoice settings → Branding theme 편집 → footer/payment instructions에 회사 계좌 (BSB·계좌번호) 입력. #2.5 Prepay/COD 인보이스 PDF에 자동 노출됨.
+### ⏳ 남음 (사용자 UI 작업, 3개)
+5. **HubSpot Workflow**: Company `Onboarding` property가 `approved`로 변경 → "Send a webhook" action → n8n #7b URL (POST, Company ID 포함). 자동화 메뉴에서.
+6. **Tally**: 온보딩 폼 Integrations → Webhooks → signing secret 활성화·복사. (폼 자체가 아직 없으면 폼 먼저 만들어야 함 — Tally MCP로 가능)
+7. **Xero**: Settings → Invoice settings → Branding theme 편집 → footer/payment instructions에 회사 계좌 (BSB·계좌번호) 입력. #2.5 Prepay/COD 인보이스 PDF에 자동 노출됨.
 
 ### ⏳ 그 이후
-- n8n에 `clicksend-creds`(Basic) + `tally-webhook-secret` credential 등록 (4·5 완료 후)
+- `YoungFoods` 알파태그 승인 확인 (대시보드/이메일, ~2026-05-30)
+- n8n `tally-webhook-secret` credential 등록 (6 완료 후)
 - Airtable UI 마무리 작업 (lookup convert·single link convert) — [[airtable-base]] 참조
 - 본격 n8n 워크플로우 빌드 시작 (#1부터)
 
