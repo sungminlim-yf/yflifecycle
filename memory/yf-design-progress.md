@@ -64,7 +64,7 @@ Xero 환경 확보 + Item 3개 등록 완료 ($78/$104/$104, EXEMPTOUTPUT) ([[xe
 
 12. **n8n 워크플로우 #7a skeleton 빌드 + 보강 완료** (2026-05-29 저녁). id `ylRJHUCFQ9RmCa6R`, **24 노드**, **inactive**, validate `valid: true`. Webhook(path `tally-onboarding-intake-v1`, responseNode) → Validate & Normalize → Search Existing Submission(멱등) → IF Already Exists → [respond already / continue] → IF Has HubSpot ID → [HubSpot Get Company → IF Company Found → [Get Associations → Extract Contact IDs → IF Has Contacts → [Batch Read Contacts → Forward Guard Check / No Contacts Set] / Set Invalid ID] / Decide Match (unmatched)] → Prepare Airtable Body(staging row fields + matched_via 통과) → Create Airtable Submission → Build Slack Message → Slack Post(`#ops-onboarding` C0B42FWL8VA) → Update Submission Slack ts(Airtable PATCH) → IF Should PATCH HubSpot(matched_via=hubspot_id AND !forward_guard_flag) → [HubSpot PATCH Onboarding=form submitted / skip] → Respond Success. **HubSpot Company `onboarding` property 확인됨** (enum: form sent / form submitted / form reviewed / pending information / approved). JSON 원본 `n8n/workflow-7a-skeleton.json`. **stub/미구현 (다음 iter)**: ① HMAC 검증 (Tally signing secret 후), ② Contact search by email fallback (hubspot_id 없을 때), ③ gocardless_mandate_id 저장 (DD redirect 페이지 구현 후).
 
-### ⏳ 남음 (사용자 UI 작업) — 2026-05-29 밤 시점
+### ⏳ 남음 (사용자 UI 작업) — **`GO-LIVE-CHECKLIST.md`에 Phase 0~5로 통합 정리됨 (2026-05-30)**. 아래는 raw 목록.
 
 - 🆕 **Airtable Automation 4건** (가이드: `airtable/automation-setup-guide.md`): #2, #2.5, #5, #7b 트리거 설정. payload `{record_id}`.
 - **Xero Developer Console**: INVOICE.UPDATE webhook 등록 (URL `https://youngfoods.app.n8n.cloud/webhook/xero-invoice-update-v1`) + signing key 발급 → n8n 환경변수 `XERO_WEBHOOK_KEY` 설정 (없으면 stub mode로 자동 통과).

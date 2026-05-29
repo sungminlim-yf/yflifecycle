@@ -112,7 +112,10 @@
 
 ## 다음 대화에서 이어갈 내용
 
-1. 남은 미결 사항 확정 (위 표 — 각 폴더에서)
-2. n8n 워크플로우 #3~#6 + #2.5 설계 → `n8n/`
-3. Target/Safety/default_dispatch 초기값 입력 (영업·생산 협의 후)
-4. 개발 요구사항 명세로 전환
+> **가동 단계 진입** — 핵심 설계·빌드 완료. 사용자 UI 작업(B트랙)은 **`GO-LIVE-CHECKLIST.md`**에 Phase 0~5 순서로 정리됨 (Airtable Automation → 외부 webhook → 워크플로우 Activate → 주문사이트 연결).
+
+1. **`GO-LIVE-CHECKLIST.md` 따라 가동** (사용자 UI 작업)
+2. 워크플로우 manual test (#5 → #7a → #7b → #2.5 → #2 → #3 → #1 순 1건씩)
+3. ClickSend 승인 후 #6a/#6b 빌드, GoCardless 후 #8 빌드
+4. Target/Safety/default_dispatch 초기값 입력 (영업·생산 협의 후) → Production Plan 운영 시작
+5. 남은 미결: `first order`/`repeat order` 기준·영업 로깅 규칙 (`hubspot/`)
