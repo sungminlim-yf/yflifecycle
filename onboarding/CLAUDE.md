@@ -83,10 +83,44 @@
 
 ## 온보딩 폼 + GoCardless 연결
 
-- **플랫폼 = Tally** (MCP 이미 연결 → 폼 자동 생성·관리 가능). 무료/저렴, conditional logic 강력 (payment term 선택에 따라 DD mandate 단계 노출 등). custom CSS로 브랜딩.
-- **온보딩 폼에서 받는 것**: 상호·담당자·연락처·기본 배송지·payment term 선택. *고객 그룹은 폼에 노출하지 않음 — HubSpot Company 생성 시점에 영업이 지정 (default `일반고객`, 가맹점/자매사만 `내부고객`으로 변경). admin review 단계에서는 그룹 변경 안 함, 필요시 영업이 별도 수정.*
-- DD 선택 시: 폼 끝에서 **GoCardless Billing Request Flow**로 redirect → BECS DDR mandate 1회 동의
-- mandate 동의 후 → 이후 수금은 Xero–GoCardless 네이티브 자동 (상세 `../xero/`)
+- **플랫폼 = Tally** (운영용 폼 `Me75K8`, workspace `w4Pyvr`). MCP 이미 연결 → 폼 자동 관리 가능. 무료/저렴, conditional logic 강력. 폼 구조는 운영 중 진화 예정 ([[tally-onboarding-form]] 참조).
+- **단일 page 구조** (multi-page 안 함 — conditional + page navigation 충돌 회피). 섹션 시각 구분은 TEXT 라벨 + DIVIDER 사용.
+- **고객 그룹은 폼에 노출하지 않음** — HubSpot Company 생성 시점에 영업이 지정 (default `일반고객`, 가맹점/자매사만 `내부고객`). admin review 단계에서는 변경 안 함.
+
+### 폼 필드 명세 v2 (2026-05-29 결정)
+
+**섹션 1 — 기본 정보 (모두 필수)**
+
+- 가게명 (shop name)
+- 가입 entity 이름 (entity name, optional — Pty Ltd 등 법인명이 다를 때)
+- 배송지 (delivery address)
+- 담당자 이름 (manager/owner name)
+- 담당자 이메일·전화
+- 회계팀 정보: "같음 / 다름" 분기 dropdown → "다름" 선택 시 회계팀 이름·이메일·전화 필드 표시
+- **Hidden field** (URL prefill, 폼 UI 숨김):
+  - `hubspot_id` — HubSpot Company ID. HubSpot 이메일 템플릿 personalization token으로 prefill.
+  - `email_prefill` — 원래 발송 대상 이메일. forward 가드용.
+
+**섹션 2 — 지불 방법** (dropdown, 3 옵션)
+
+| 옵션 | 분기 필드 | 후속 처리 |
+|---|---|---|
+| **Direct Debit (default 권장)** | 없음 (필드 추가 X) | Tally 완료 → redirect page → 동적 BRT 생성 → GoCardless flow URL로 자동 redirect. mandate 동의 후 자동 수금. |
+| **Credit Application** | Legal entity / ABN/ACN / Credit term (7 Days default · EOM) / Credit limit 요청액 (3 옵션) | admin이 Airtable staging review 시 credit term + credit limit 승인. 승인 후 #7b가 7일 또는 EOM 결제 조건 부여. |
+| **COD** | 없음 | 환영 이메일에 회사 계좌 정보 안내. **출하 전 bank transfer 입금 증빙 필수** (#2.5로 인보이스 발행 후 결제 확인 → 출하). |
+
+> *고객이 폼에서 선택한 payment term은 admin review 단계에서 override 가능 (Airtable staging에 그대로 저장 → admin 확정).*
+
+### GoCardless Billing Request Flow 연결 패턴 (2026-05-29 결정)
+
+- **Tally 폼 안에서 GoCardless 정적 임베드 = 불가능**. BRT URL은 single-use, 고객별 동적 생성 필요. 정적 URL을 여러 명이 쓰면 첫 사람 완료 후 expired 또는 데이터 오염.
+- **운영 패턴 = Tally redirect on completion + 별도 redirect page**:
+  1. Tally 폼 완료 → Tally가 정적 redirect URL로 이동 (`https://<our>/onboarding-redirect?response_id={tally_response_id}`)
+  2. Redirect page가 #7a 결과 또는 Tally response를 fetch
+  3. payment method가 DD면 → n8n endpoint 호출 → GoCardless API로 동적 BRT 생성 → 그 flow URL로 다시 redirect
+  4. payment method가 Credit/COD면 → "Thank you, we'll contact you within 1 business day" 정적 메시지
+- **Redirect page 구현은 별도 작업** (#7a 빌드 이후 turn). 현재는 폼 수정 + #7a (Tally → Airtable staging)까지만.
+- mandate 동의 후 이후 수금은 Xero–GoCardless 네이티브 자동 (상세 `../xero/`)
 - HubSpot/Xero/Airtable 매핑은 Tally → n8n webhook → 각 시스템에 propagate (상세 `../n8n/`)
 
 ### 폼 발송·매칭 패턴 (개정 2026-05-29)
@@ -108,8 +142,10 @@
 ## 확정된 결정 (이 도메인)
 
 - 토큰: 영구 + 신고 시 폐기·재발급. **발급 시점 = HubSpot Company 생성 직후 #0이 자동** (정책은 본 폴더, 분실 UX는 `../order-site/`)
-- 온보딩 폼: **Tally** + GoCardless Billing Request Flow
+- 온보딩 폼: **Tally `Me75K8`** (단일 page, 섹션 2개 — 기본 정보 / 지불 방법) + GoCardless 동적 redirect (별도 redirect page)
 - **고객 그룹 지정 시점 (개정 2026-05-29)**: HubSpot Company 생성 시 영업이 결정 (default `일반고객`, 가맹점/자매사만 `내부고객`). 온보딩 review 단계로 미루지 않음.
 - **Onboarding 승인 주체 (개정 2026-05-29)**: **admin team** (영업 X). admin이 Airtable `Onboarding Submissions` staging 보고 status=approved로 변경 = #7b 트리거.
 - **Pre-onboarding 주문**: 매직 토큰은 HubSpot 생성 시점부터 발급되므로 정식 온보딩 전 매직 링크 주문 가능. payment term 없으면 #1이 자동 오더 hold ON + Slack. 입력 정보(배송지·연락처)는 오더에만 저장 (고객 행은 admin이 Tally form 통해 채움).
 - **폼 발송·매칭 = HubSpot 이메일 템플릿 + Tally hidden field로 `hubspot_id` 박아 보냄** (2026-05-28) — 영업·고객·어드민 어느 진입 경로든 단일 패턴. n8n #7a가 ID 우선 매칭, email cross-check로 forward 가드, ID 없으면 email fallback.
+- **Payment term 옵션 (2026-05-29 결정)**: Direct Debit / Credit Application (7 Days·EOM × credit limit 3 tier) / COD 3종. COD는 출하 전 bank transfer 입금 증빙 필수. 고객 폼 선택값은 admin review에서 override 가능.
+- **GoCardless 연결 (2026-05-29 결정)**: Tally 폼 안 정적 임베드 불가 → Tally redirect on completion + 별도 redirect page에서 동적 BRT 생성 후 GoCardless flow URL로 redirect. Redirect page 구현은 별도 작업.
