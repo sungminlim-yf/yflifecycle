@@ -62,12 +62,27 @@ Xero 환경 확보 + Item 3개 등록 완료 ($78/$104/$104, EXEMPTOUTPUT) ([[xe
 
 12. **n8n 워크플로우 #7a skeleton 빌드 + 보강 완료** (2026-05-29 저녁). id `ylRJHUCFQ9RmCa6R`, **24 노드**, **inactive**, validate `valid: true`. Webhook(path `tally-onboarding-intake-v1`, responseNode) → Validate & Normalize → Search Existing Submission(멱등) → IF Already Exists → [respond already / continue] → IF Has HubSpot ID → [HubSpot Get Company → IF Company Found → [Get Associations → Extract Contact IDs → IF Has Contacts → [Batch Read Contacts → Forward Guard Check / No Contacts Set] / Set Invalid ID] / Decide Match (unmatched)] → Prepare Airtable Body(staging row fields + matched_via 통과) → Create Airtable Submission → Build Slack Message → Slack Post(`#ops-onboarding` C0B42FWL8VA) → Update Submission Slack ts(Airtable PATCH) → IF Should PATCH HubSpot(matched_via=hubspot_id AND !forward_guard_flag) → [HubSpot PATCH Onboarding=form submitted / skip] → Respond Success. **HubSpot Company `onboarding` property 확인됨** (enum: form sent / form submitted / form reviewed / pending information / approved). JSON 원본 `n8n/workflow-7a-skeleton.json`. **stub/미구현 (다음 iter)**: ① HMAC 검증 (Tally signing secret 후), ② Contact search by email fallback (hubspot_id 없을 때), ③ gocardless_mandate_id 저장 (DD redirect 페이지 구현 후).
 
-### ⏳ 남음 (사용자 UI 작업)
-- ~~**HubSpot Workflow `Onboarding=approved → webhook`**: 2026-05-29 모델 개정으로 **불필요해짐** (트리거 위치 변경: Airtable로). 대신 ↓~~
-- 🆕 **Airtable 자동화**: `Onboarding Submissions` 테이블에 자동화 추가 — `status` 필드가 `approved`로 변경되면 → n8n #7b webhook POST (#7b 빌드 후 URL 박기). Airtable UI Automations에서 설정.
-- 🆕 **HubSpot Workflow `Company create → webhook` (옵션 A)**: Company 생성 시 → n8n #0 webhook POST. HubSpot Pro/Enterprise tier 필요. tier 안 되면 n8n cron polling 옵션 B로 대체.
-- **Tally**: 온보딩 폼 Integrations → Webhooks → signing secret 활성화·복사. (폼 자체가 아직 없으면 폼 먼저 만들어야 함 — Tally MCP로 가능)
-- **Xero**: Settings → Invoice settings → Branding theme 편집 → footer/payment instructions에 회사 계좌 (BSB·계좌번호) 입력. #2.5 Prepay/COD 인보이스 PDF에 자동 노출됨.
+### ⏳ 남음 (사용자 UI 작업) — 2026-05-29 밤 시점
+
+- 🆕 **Airtable Automation 4건** (가이드: `airtable/automation-setup-guide.md`): #2, #2.5, #5, #7b 트리거 설정. payload `{record_id}`.
+- **Xero Developer Console**: INVOICE.UPDATE webhook 등록 (URL `https://youngfoods.app.n8n.cloud/webhook/xero-invoice-update-v1`) + signing key 발급 → n8n 환경변수 `XERO_WEBHOOK_KEY` 설정 (없으면 stub mode로 자동 통과).
+- **Tally**: 온보딩 폼 `Me75K8` Integrations → Webhooks 등록 (URL `/webhook/tally-onboarding-intake-v1`) + signing secret 발급.
+- **Tally redirectOnCompletionUrl**: `https://youngfoods.app.n8n.cloud/webhook/onboarding-redirect-v1?response_id={response_id}` (#8 빌드 후).
+- **HubSpot Workflow `Company create → webhook` (옵션 A)**: Company 생성 시 → n8n #0 webhook POST. tier 안 되면 polling(옵션 B) 그대로.
+- **Xero Branding theme**: footer/payment instructions에 회사 계좌 (BSB·계좌번호) 입력. #2.5 Prepay/COD 인보이스 PDF에 자동 노출.
+- **Airtable 고객 테이블 credit_limit 필드 신설** (옵션, #3 hold 계산 robust성).
+- **GoCardless 계정** + API key → n8n credential `gocardless-api-key` (#8 빌드 unlock).
+- **ClickSend 알파태그** `YoungFoods` 승인 확인 (~2026-05-30, #6a/b unlock).
+- **HubSpot 테스트 Company `266741551606` archive** (테스트 데이터 정리).
+
+### ⏳ 다음 픽업 시 추천 작업 순서 (집/맥북)
+
+1. `git pull` (이번 밤 9 commit 받기: `42e06a1`...`a2fa4e2`).
+2. **#3-polling 별도 워크플로우 빌드** (task #23 pending) — n8n_create_workflow 인자 차근차근. Schedule trigger(매시간 :05) → Compute Since(now-65min) → Fetch Modified Invoices → Extract IDs → POST per invoice to #3 webhook.
+3. **컷오프 timezone 정밀화** (#1 Validate Input): Sydney AEST/AEDT DST aware (Intl.DateTimeFormat 또는 수동).
+4. **워크플로우 manual test** — 사용자 손작업 일부 완료 후 #5 → #7a → #7b → #2.5 → #2 → #3 순으로 1건씩 trigger.
+5. **운영 가동 체크리스트 문서**: 사용자 가동 직전 단계별 안내.
+6. **#7b Phase 3 환영 이메일 stub** (Marketing Hub plan 확인 또는 Gmail 대안).
 
 ### ⏳ 그 이후
 - `YoungFoods` 알파태그 승인 확인 (대시보드/이메일, ~2026-05-30)
