@@ -1,0 +1,19 @@
+{
+  "id": "GuMEWpGQ4506RmHf",
+  "name": "WF #2.5: Prepay/COD order → Xero invoice (skeleton)",
+  "active": false,
+  "settings": {
+    "executionOrder": "v1",
+    "saveDataErrorExecution": "all",
+    "saveDataSuccessExecution": "all",
+    "saveManualExecutions": true
+  },
+  "_note": "거의 #2와 동일 구조. 차이: ① 트리거 조건 = 출하 상태=접수 AND payment term ∈ {Prepay, COD}, ② Date=DueDate=오늘, ③ Airtable update에 오더 Hold=true 추가. JSON 본체는 n8n_get_workflow id=GuMEWpGQ4506RmHf로 가져올 수 있음. 디스크 저장은 lightweight pointer.",
+  "_diff_from_wf2": {
+    "webhook_path": "prepay-cod-invoice-v1",
+    "safety_validPayment": "['Prepay', 'COD']",
+    "safety_dispatchStatus_check": "in ['접수', 'Hold']",
+    "build_invoice_date": "DueDate = today (DD/7-day 산정 X)",
+    "update_order_extra_field": "'오더 Hold': true"
+  }
+}

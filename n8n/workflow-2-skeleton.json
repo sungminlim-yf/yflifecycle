@@ -1,0 +1,273 @@
+{
+  "id": "W1qYHJKHtPzKpbm4",
+  "name": "WF #2: dispatch → Xero invoice (DD / 7-day, skeleton)",
+  "active": false,
+  "settings": {
+    "executionOrder": "v1",
+    "saveDataErrorExecution": "all",
+    "saveDataSuccessExecution": "all",
+    "saveManualExecutions": true
+  },
+  "nodes": [
+    {
+      "id": "node-webhook",
+      "name": "Webhook (Airtable Automation)",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2,
+      "position": [100, 300],
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "dispatch-invoice-v1",
+        "responseMode": "responseNode",
+        "options": {}
+      },
+      "notes": "Triggered by Airtable Automation when 오더.출하 상태=출하완료 AND payment term ∈ {GoCardless DD, 7-day credit}.",
+      "onError": "continueRegularOutput"
+    },
+    {
+      "id": "node-validate",
+      "name": "Validate Payload",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [320, 300],
+      "parameters": {
+        "language": "javaScript",
+        "jsCode": "const inItem = $input.first().json;\nconst body = inItem.body || inItem;\nconst record_id = body.record_id\n  || (body.record && body.record.id)\n  || (body.records && body.records[0] && body.records[0].id)\n  || (body.fields && body.fields.record_id)\n  || '';\nif (!record_id || !/^rec[A-Za-z0-9]{14}$/.test(record_id)) throw new Error('missing_or_invalid_record_id');\nreturn { json: { record_id, raw: body } };"
+      }
+    },
+    {
+      "id": "node-fetch-order",
+      "name": "Fetch Order",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [540, 300],
+      "parameters": {
+        "method": "GET",
+        "url": "=https://api.airtable.com/v0/appag4IfzpTeQPS1X/tbliaikQUIRawfMU7/{{ $json.record_id }}",
+        "authentication": "predefinedCredentialType",
+        "nodeCredentialType": "airtableTokenApi",
+        "options": {}
+      },
+      "credentials": { "airtableTokenApi": { "id": "B2hRHQungck3WMoE", "name": "Airtable Personal Access Token account" } },
+      "retryOnFail": true,
+      "maxTries": 2
+    },
+    {
+      "id": "node-fetch-customer",
+      "name": "Fetch Customer",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [760, 300],
+      "parameters": {
+        "method": "GET",
+        "url": "=https://api.airtable.com/v0/appag4IfzpTeQPS1X/tbl1kAgO2ISkSS3O6/{{ ($json.fields && $json.fields['고객'] && $json.fields['고객'][0]) || 'missing' }}",
+        "authentication": "predefinedCredentialType",
+        "nodeCredentialType": "airtableTokenApi",
+        "options": {}
+      },
+      "credentials": { "airtableTokenApi": { "id": "B2hRHQungck3WMoE", "name": "Airtable Personal Access Token account" } },
+      "onError": "continueRegularOutput",
+      "retryOnFail": true,
+      "maxTries": 2
+    },
+    {
+      "id": "node-fetch-lines",
+      "name": "Fetch Line Items",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [980, 300],
+      "parameters": {
+        "method": "GET",
+        "url": "https://api.airtable.com/v0/appag4IfzpTeQPS1X/tblVXVQzT1q8U0HJQ",
+        "authentication": "predefinedCredentialType",
+        "nodeCredentialType": "airtableTokenApi",
+        "sendQuery": true,
+        "queryParameters": {
+          "parameters": [
+            { "name": "filterByFormula", "value": "={{ 'FIND(\"' + $('Validate Payload').item.json.record_id + '\", ARRAYJOIN({오더}))' }}" }
+          ]
+        },
+        "options": {}
+      },
+      "credentials": { "airtableTokenApi": { "id": "B2hRHQungck3WMoE", "name": "Airtable Personal Access Token account" } },
+      "retryOnFail": true,
+      "maxTries": 2
+    },
+    {
+      "id": "node-safety-checks",
+      "name": "Safety Checks",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [1200, 300],
+      "parameters": {
+        "language": "javaScript",
+        "jsCode": "const order = $('Fetch Order').first().json;\nconst customer = $('Fetch Customer').first().json;\nconst lineItems = ($('Fetch Line Items').first().json.records) || [];\n\nconst validPayment = ['GoCardless DD', '7-day credit'];\nconst orderFields = order.fields || {};\nconst customerFields = customer.fields || {};\n\nconst dispatchStatus = orderFields['출하 상태'];\nconst paymentTerm = customerFields['Payment term'] || '';\nconst xeroContactID = customerFields['Xero ContactID'] || '';\nconst existingInvoiceId = orderFields['Xero 인보이스 ID'] || '';\nconst customerGroup = customerFields['고객 그룹'] || '일반고객';\n\nif (dispatchStatus !== '출하완료') return { json: { should_proceed: false, skip_reason: 'not_dispatched', dispatch_status: dispatchStatus } };\nif (!validPayment.includes(paymentTerm)) return { json: { should_proceed: false, skip_reason: 'payment_term_routed_to_other_wf', payment_term: paymentTerm } };\nif (!xeroContactID) return { json: { should_proceed: false, skip_reason: 'xero_contact_missing' } };\nif (existingInvoiceId) return { json: { should_proceed: false, skip_reason: 'already_invoiced', xero_invoice_id: existingInvoiceId } };\nif (lineItems.length === 0) return { json: { should_proceed: false, skip_reason: 'no_line_items' } };\n\nreturn { json: {\n  should_proceed: true,\n  order_id: order.id,\n  order_no: orderFields['주문번호'],\n  payment_term: paymentTerm,\n  xero_contact_id: xeroContactID,\n  customer_group: customerGroup,\n  line_count: lineItems.length\n} };"
+      }
+    },
+    {
+      "id": "node-if-pass",
+      "name": "IF Pass Safety",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2,
+      "position": [1420, 300],
+      "parameters": {
+        "conditions": {
+          "options": { "caseSensitive": true, "leftValue": "", "typeValidation": "loose" },
+          "combinator": "and",
+          "conditions": [
+            { "leftValue": "={{ $json.should_proceed }}", "rightValue": true, "operator": { "type": "boolean", "operation": "true", "singleValue": true } }
+          ]
+        },
+        "options": {}
+      },
+      "onError": "continueRegularOutput"
+    },
+    {
+      "id": "node-respond-abort",
+      "name": "Respond Aborted",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.1,
+      "position": [1640, 480],
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={{ JSON.stringify({ status: 'aborted', skip_reason: $json.skip_reason || 'unknown', record_id: $('Validate Payload').item.json.record_id }) }}",
+        "options": { "responseCode": 200 }
+      },
+      "notes": "TODO: skip Slack 알림 추가 (#ops-accounts)."
+    },
+    {
+      "id": "node-build-invoice",
+      "name": "Build Invoice Body",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [1640, 200],
+      "parameters": {
+        "language": "javaScript",
+        "jsCode": "const order = $('Fetch Order').first().json;\nconst lineRecords = ($('Fetch Line Items').first().json.records) || [];\nconst safety = $json;\nconst orderFields = order.fields || {};\nconst orderNo = orderFields['주문번호'];\nconst xeroContactID = safety.xero_contact_id;\nconst paymentTerm = safety.payment_term;\n\nconst lineItems = [];\nlet subtotal = 0;\nfor (const lineR of lineRecords) {\n  const f = lineR.fields || {};\n  const qty = f['수량'] || 0;\n  const unitPrice = f['단가'] || 0;\n  const label = f['label'] || '';\n  const skuMatch = label.match(/-([A-Z]+)$/);\n  const itemCode = skuMatch ? skuMatch[1] : '';\n  const lineSubtotal = qty * unitPrice;\n  subtotal += lineSubtotal;\n  lineItems.push({\n    ItemCode: itemCode,\n    Description: label,\n    Quantity: qty,\n    UnitAmount: unitPrice,\n    TaxType: 'EXEMPTOUTPUT'\n  });\n}\n\nif (subtotal < 300) {\n  lineItems.push({\n    Description: 'Delivery fee',\n    Quantity: 1,\n    UnitAmount: 5,\n    TaxType: 'OUTPUT',\n    DiscountRate: 0\n  });\n}\n\nconst today = new Date();\nconst todayISO = today.toISOString().slice(0, 10);\nlet dueDate = new Date(today);\nif (paymentTerm === 'GoCardless DD') {\n  const day = today.getDay();\n  let daysToAdd;\n  if (day === 1 || day === 2) daysToAdd = 7 + (2 - day);\n  else if (day === 0) daysToAdd = 2;\n  else daysToAdd = (2 - day + 7) % 7;\n  dueDate.setDate(today.getDate() + daysToAdd);\n} else if (paymentTerm === '7-day credit') {\n  dueDate.setDate(today.getDate() + 7);\n}\nconst dueISO = dueDate.toISOString().slice(0, 10);\n\nconst invoiceBody = {\n  Invoices: [{\n    Type: 'ACCREC',\n    Contact: { ContactID: xeroContactID },\n    Date: todayISO,\n    DueDate: dueISO,\n    Reference: orderNo ? ('ORD-' + orderNo) : '',\n    Status: 'AUTHORISED',\n    LineAmountTypes: 'Exclusive',\n    LineItems: lineItems\n  }]\n};\n\nreturn { json: {\n  invoice_body_str: JSON.stringify(invoiceBody),\n  subtotal,\n  delivery_fee: subtotal < 300 ? 5 : 0,\n  due_date: dueISO,\n  order_id: safety.order_id,\n  order_no: orderNo,\n  line_count: lineItems.length\n} };"
+      },
+      "notes": "TODO next-iter: Xero Item Code·품목명 lookup을 라인아이템 제품 fetch로 강화. 고객 그룹 discount % 자동 적용 여부 확인 후 라인에 DiscountRate 추가."
+    },
+    {
+      "id": "node-xero-create",
+      "name": "Xero Create Invoice",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [1860, 200],
+      "parameters": {
+        "method": "POST",
+        "url": "https://api.xero.com/api.xro/2.0/Invoices",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "oAuth2Api",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            { "name": "Accept", "value": "application/json" },
+            { "name": "Content-Type", "value": "application/json" }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ $json.invoice_body_str }}",
+        "options": {}
+      },
+      "credentials": { "oAuth2Api": { "id": "98R0oS6cSE9DtxYP", "name": "xero-custom-connection" } },
+      "onError": "continueRegularOutput",
+      "retryOnFail": true,
+      "maxTries": 2
+    },
+    {
+      "id": "node-xero-email",
+      "name": "Xero Email Invoice",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [2080, 200],
+      "parameters": {
+        "method": "POST",
+        "url": "=https://api.xero.com/api.xro/2.0/Invoices/{{ (($json.Invoices && $json.Invoices[0] && $json.Invoices[0].InvoiceID) || '') }}/Email",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "oAuth2Api",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            { "name": "Accept", "value": "application/json" },
+            { "name": "Content-Type", "value": "application/json" }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={ }",
+        "options": {}
+      },
+      "credentials": { "oAuth2Api": { "id": "98R0oS6cSE9DtxYP", "name": "xero-custom-connection" } },
+      "onError": "continueRegularOutput",
+      "retryOnFail": true,
+      "maxTries": 2,
+      "notes": "POST /Invoices/{id}/Email with empty body sends to Contact's email."
+    },
+    {
+      "id": "node-update-order",
+      "name": "Update Airtable Order",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [2300, 200],
+      "parameters": {
+        "method": "PATCH",
+        "url": "=https://api.airtable.com/v0/appag4IfzpTeQPS1X/tbliaikQUIRawfMU7/{{ $('Build Invoice Body').item.json.order_id }}",
+        "authentication": "predefinedCredentialType",
+        "nodeCredentialType": "airtableTokenApi",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({ fields: { 'Xero 인보이스 ID': (($('Xero Create Invoice').item.json.Invoices && $('Xero Create Invoice').item.json.Invoices[0] && $('Xero Create Invoice').item.json.Invoices[0].InvoiceID) || ''), '결제 상태': '미결제' }, typecast: true }) }}",
+        "options": {}
+      },
+      "credentials": { "airtableTokenApi": { "id": "B2hRHQungck3WMoE", "name": "Airtable Personal Access Token account" } },
+      "retryOnFail": true,
+      "maxTries": 2
+    },
+    {
+      "id": "node-slack-success",
+      "name": "Slack Post Success",
+      "type": "n8n-nodes-base.slack",
+      "typeVersion": 2.2,
+      "position": [2520, 200],
+      "parameters": {
+        "resource": "message",
+        "operation": "post",
+        "select": "channel",
+        "channelId": { "__rl": true, "value": "C0B6G1HSG1H", "mode": "id", "cachedResultName": "ops-accounts" },
+        "text": "=✅ 인보이스 발행 완료: *ORD-{{ $('Build Invoice Body').item.json.order_no }}*\nPayment: {{ $('Safety Checks').item.json.payment_term }} · Group: {{ $('Safety Checks').item.json.customer_group }}\nSubtotal: ${{ $('Build Invoice Body').item.json.subtotal }} {{ $('Build Invoice Body').item.json.delivery_fee > 0 ? ('+ delivery $' + $('Build Invoice Body').item.json.delivery_fee + ' (+GST $0.50)') : '(무료 배송)' }}\nDue: {{ $('Build Invoice Body').item.json.due_date }}\nXero InvoiceID: {{ (($('Xero Create Invoice').item.json.Invoices && $('Xero Create Invoice').item.json.Invoices[0] && $('Xero Create Invoice').item.json.Invoices[0].InvoiceID) || '(발행 실패)') }}",
+        "otherOptions": {}
+      },
+      "credentials": { "slackApi": { "id": "NAh6hd7VFXGqksqK", "name": "Slack account" } },
+      "onError": "continueRegularOutput",
+      "retryOnFail": true,
+      "maxTries": 2
+    },
+    {
+      "id": "node-respond-success",
+      "name": "Respond Success",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.1,
+      "position": [2740, 200],
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={{ JSON.stringify({ status: 'invoiced', record_id: $('Validate Payload').item.json.record_id, order_no: $('Build Invoice Body').item.json.order_no, xero_invoice_id: (($('Xero Create Invoice').item.json.Invoices && $('Xero Create Invoice').item.json.Invoices[0] && $('Xero Create Invoice').item.json.Invoices[0].InvoiceID) || ''), subtotal: $('Build Invoice Body').item.json.subtotal, due_date: $('Build Invoice Body').item.json.due_date }) }}",
+        "options": { "responseCode": 200 }
+      }
+    }
+  ],
+  "connections": {
+    "Webhook (Airtable Automation)": { "main": [[{ "node": "Validate Payload", "type": "main", "index": 0 }]] },
+    "Validate Payload": { "main": [[{ "node": "Fetch Order", "type": "main", "index": 0 }]] },
+    "Fetch Order": { "main": [[{ "node": "Fetch Customer", "type": "main", "index": 0 }]] },
+    "Fetch Customer": { "main": [[{ "node": "Fetch Line Items", "type": "main", "index": 0 }]] },
+    "Fetch Line Items": { "main": [[{ "node": "Safety Checks", "type": "main", "index": 0 }]] },
+    "Safety Checks": { "main": [[{ "node": "IF Pass Safety", "type": "main", "index": 0 }]] },
+    "IF Pass Safety": { "main": [[{ "node": "Build Invoice Body", "type": "main", "index": 0 }], [{ "node": "Respond Aborted", "type": "main", "index": 0 }]] },
+    "Build Invoice Body": { "main": [[{ "node": "Xero Create Invoice", "type": "main", "index": 0 }]] },
+    "Xero Create Invoice": { "main": [[{ "node": "Xero Email Invoice", "type": "main", "index": 0 }]] },
+    "Xero Email Invoice": { "main": [[{ "node": "Update Airtable Order", "type": "main", "index": 0 }]] },
+    "Update Airtable Order": { "main": [[{ "node": "Slack Post Success", "type": "main", "index": 0 }]] },
+    "Slack Post Success": { "main": [[{ "node": "Respond Success", "type": "main", "index": 0 }]] }
+  }
+}

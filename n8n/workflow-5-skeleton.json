@@ -1,0 +1,24 @@
+{
+  "id": "EM3FKoINCG3ytoNV",
+  "name": "WF #5: Airtable 고객 → HubSpot 재무 상태 공유 (skeleton)",
+  "active": false,
+  "settings": {
+    "executionOrder": "v1",
+    "saveDataErrorExecution": "all",
+    "saveDataSuccessExecution": "all",
+    "saveManualExecutions": true
+  },
+  "_note": "11 노드, 본체는 n8n_get_workflow id=EM3FKoINCG3ytoNV로 가져올 수 있음.",
+  "_overview": {
+    "trigger": "Webhook (path /customer-finance-sync-v1, Airtable Automation 호출)",
+    "flow": "Webhook → Validate → Fetch Customer → Extract HubSpot ID → IF Has HubSpot ID → [Fetch HubSpot Company(현 값) → Compute Diff(멱등 가드) → IF Needs Update → [Patch HubSpot account_hold/hold_reason/outstanding_aud / skip] → Respond Success] / Respond Skipped Guest]",
+    "user_action_required": [
+      "Airtable Automation 설정: 고객 테이블 {고객 Hold, hold reason, outstanding} 변경 시 → n8n webhook POST https://youngfoods.app.n8n.cloud/webhook/customer-finance-sync-v1 with {record_id}"
+    ],
+    "behavior_notes": [
+      "게스트 (HubSpot 고객 ID 비어있음) → silently skip",
+      "hold=false면 hold_reason 강제 공백 (Extract HubSpot ID에서 source_hold_reason='' 처리)",
+      "현 값과 비교 후 동일하면 PATCH skip (no-op idempotent)"
+    ]
+  }
+}
