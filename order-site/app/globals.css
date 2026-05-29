@@ -34,3 +34,10 @@ textarea { min-height: 60px; resize: vertical; }
 .result.ok { background: #e6f7ed; border: 1px solid #34c759; }
 .result.err { background: #fdecea; border: 1px solid #e74c3c; }
 .toggle { display: flex; align-items: center; gap: 8px; font-size: 14px; margin: 6px 0; }
+.langbar { display: flex; justify-content: flex-end; gap: 6px; margin-bottom: 10px; }
+.langbtn { padding: 5px 12px; border: 1px solid #d0d0d0; background: #fff; border-radius: 16px; font-size: 13px; cursor: pointer; color: #555; }
+.langbtn.active { background: #1f6feb; border-color: #1f6feb; color: #fff; font-weight: 600; }
+.shopcard { border: 1px solid #1f6feb33; }
+.shoprow { display: flex; justify-content: space-between; gap: 12px; padding: 6px 0; font-size: 14px; border-bottom: 1px solid #f0f0f0; }
+.shoprow:last-child { border-bottom: none; }
+.shoprow .muted { flex-shrink: 0; }

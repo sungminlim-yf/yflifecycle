@@ -1,0 +1,12 @@
+{
+  "id": "hSedNwzFP1k4nAPX",
+  "name": "WF #R: resolve customer by magic token (order-site)",
+  "active": false,
+  "_note": "오더사이트 매직링크 진입 시 고객 정보 조회(자체 인지 검토 배너용). 5 노드. 본체는 n8n_get_workflow id=hSedNwzFP1k4nAPX.",
+  "_overview": {
+    "trigger": "Webhook POST /yf-resolve-token-v1 (headerAuth = order-intake-token 재사용, 토큰=인증)",
+    "flow": "Webhook → Extract Token → Search Customer(Airtable {매직 토큰} 매칭) → Format Response(안전필드만: 상호·담당자·이메일·연락처·기본배송지·payment_term, 토큰·외부ID 제외) → Respond",
+    "consumer": "order-site /api/resolve route가 서버측에서 호출(order-intake 헤더 주입). page.js가 매직링크 진입 시 fetch → 샵 정보 배너 표시.",
+    "user_action": "이 워크플로우 Activate 필요."
+  }
+}
