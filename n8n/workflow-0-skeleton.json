@@ -1,0 +1,140 @@
+{
+  "name": "WF #0: HubSpot Company → Airtable + Magic Token (skeleton, polling)",
+  "nodes": [
+    {
+      "id": "node-schedule",
+      "name": "Every 5 Min",
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1.3,
+      "position": [100, 300],
+      "parameters": {
+        "rule": {
+          "interval": [
+            { "field": "minutes", "minutesInterval": 5 }
+          ]
+        }
+      }
+    },
+    {
+      "id": "node-search-companies",
+      "name": "Search New HubSpot Companies",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.4,
+      "position": [320, 300],
+      "parameters": {
+        "method": "POST",
+        "url": "https://api.hubapi.com/crm/v3/objects/companies/search",
+        "authentication": "predefinedCredentialType",
+        "nodeCredentialType": "hubspotAppToken",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({ filterGroups: [{ filters: [{ propertyName: 'createdate', operator: 'GTE', value: String(Date.now() - 10 * 60 * 1000) }] }], properties: ['name','customer_group','magic_token','domain','phone'], limit: 100, sorts: [{ propertyName: 'createdate', direction: 'DESCENDING' }] }) }}",
+        "options": {}
+      },
+      "credentials": {
+        "hubspotAppToken": {
+          "id": "o9u31xvDKlsBJcZO",
+          "name": "HubSpot Private App (companies read)"
+        }
+      },
+      "retryOnFail": true,
+      "maxTries": 3
+    },
+    {
+      "id": "node-extract-companies",
+      "name": "Extract Companies",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [540, 300],
+      "parameters": {
+        "language": "javaScript",
+        "jsCode": "const response = $input.first().json;\nconst companies = response.results || [];\nif (companies.length === 0) return [];\nreturn companies.map(c => ({ json: c }));"
+      }
+    },
+    {
+      "id": "node-process-each",
+      "name": "Process Each Company",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [760, 300],
+      "parameters": {
+        "mode": "runOnceForEachItem",
+        "language": "javaScript",
+        "jsCode": "const crypto = require('crypto');\nconst company = $json;\nconst hubspotId = String(company.id);\nconst props = company.properties || {};\nconst name = props.name || '';\nconst existingToken = (props.magic_token || '').trim();\nconst existingGroup = (props.customer_group || '').trim();\nconst setCustomerGroup = !existingGroup;\n\nlet magicToken;\nif (existingToken) {\n  magicToken = existingToken;\n} else {\n  magicToken = crypto.randomUUID();\n}\n\nconst customerGroupValue = existingGroup || '일반고객';\n\nconst airtableBody = {\n  records: [{\n    fields: {\n      'HubSpot 고객 ID': hubspotId,\n      '상호': name,\n      '매직 토큰': magicToken,\n      '고객 그룹': customerGroupValue\n    }\n  }],\n  performUpsert: { fieldsToMergeOn: ['HubSpot 고객 ID'] },\n  typecast: true\n};\n\nconst hubspotProps = { magic_token: magicToken };\nif (setCustomerGroup) hubspotProps.customer_group = '일반고객';\nconst hubspotBody = { properties: hubspotProps };\n\nreturn {\n  json: {\n    hubspot_id: hubspotId,\n    name,\n    magic_token: magicToken,\n    customer_group: customerGroupValue,\n    set_customer_group: setCustomerGroup,\n    token_freshly_generated: !existingToken,\n    airtable_body: JSON.stringify(airtableBody),\n    hubspot_body: JSON.stringify(hubspotBody)\n  }\n};"
+      }
+    },
+    {
+      "id": "node-airtable-upsert",
+      "name": "Airtable Upsert Customer",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.4,
+      "position": [980, 300],
+      "parameters": {
+        "method": "PATCH",
+        "url": "https://api.airtable.com/v0/appag4IfzpTeQPS1X/tbl1kAgO2ISkSS3O6",
+        "authentication": "predefinedCredentialType",
+        "nodeCredentialType": "airtableTokenApi",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ $json.airtable_body }}",
+        "options": {}
+      },
+      "credentials": {
+        "airtableTokenApi": {
+          "id": "B2hRHQungck3WMoE",
+          "name": "Airtable Personal Access Token account"
+        }
+      },
+      "retryOnFail": true,
+      "maxTries": 3
+    },
+    {
+      "id": "node-hubspot-patch",
+      "name": "Update HubSpot Magic Token",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.4,
+      "position": [1200, 300],
+      "parameters": {
+        "method": "PATCH",
+        "url": "=https://api.hubapi.com/crm/v3/objects/companies/{{ $('Process Each Company').item.json.hubspot_id }}",
+        "authentication": "predefinedCredentialType",
+        "nodeCredentialType": "hubspotAppToken",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ $('Process Each Company').item.json.hubspot_body }}",
+        "options": {}
+      },
+      "credentials": {
+        "hubspotAppToken": {
+          "id": "o9u31xvDKlsBJcZO",
+          "name": "HubSpot Private App (companies read)"
+        }
+      },
+      "retryOnFail": true,
+      "maxTries": 3
+    }
+  ],
+  "connections": {
+    "Every 5 Min": {
+      "main": [[{ "node": "Search New HubSpot Companies", "type": "main", "index": 0 }]]
+    },
+    "Search New HubSpot Companies": {
+      "main": [[{ "node": "Extract Companies", "type": "main", "index": 0 }]]
+    },
+    "Extract Companies": {
+      "main": [[{ "node": "Process Each Company", "type": "main", "index": 0 }]]
+    },
+    "Process Each Company": {
+      "main": [[{ "node": "Airtable Upsert Customer", "type": "main", "index": 0 }]]
+    },
+    "Airtable Upsert Customer": {
+      "main": [[{ "node": "Update HubSpot Magic Token", "type": "main", "index": 0 }]]
+    }
+  },
+  "settings": {
+    "executionOrder": "v1",
+    "saveDataSuccessExecution": "all",
+    "saveManualExecutions": true,
+    "saveDataErrorExecution": "all"
+  }
+}
