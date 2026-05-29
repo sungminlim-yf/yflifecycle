@@ -128,7 +128,8 @@
 - **HubSpot 고객 ID + Xero ContactID + 매직/복구 토큰** (매핑 허브 키)
 - 상호 / 담당자 / 이메일 / 연락처 / 기본 배송지 / payment term
 - **고객 그룹 (single select): `내부고객` / `일반고객`** — Xero Contact의 default discount % 결정 (내부 5% / 일반 0%). 그룹 변경 시 n8n이 Xero 동기 갱신. **default = `일반고객`** (#0이 HubSpot Company 생성 시 set), 가맹점/자매사만 영업이 HubSpot에서 `내부고객`으로 변경.
-- 고객 Hold (Xero에서 동기화: credit limit 초과·outstanding 문제) + hold reason
+- 고객 Hold (Xero에서 동기화: credit limit 초과·outstanding 문제) + hold reason + `outstanding` (currency)
+- `credit_limit` (currency, AUD — `fldmZiwCKyybPcSCI`, 신설 2026-05-30) — #3이 `outstanding ≥ credit_limit` 비교로 hold 산출. 비어있으면 overdue만으로 판단. 온보딩 Credit Application tier에 따라 영업/admin 입력.
 - 링크 재요청 횟수 (QR 스티커 트리거용)
 - QR 스티커 추천 플래그 / 발급 여부
 

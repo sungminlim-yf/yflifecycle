@@ -44,7 +44,7 @@
 | `HubSpot Private App (companies read)` | hubspotAppToken | `o9u31xvDKlsBJcZO` | #5, #7a, #7b |
 | `Airtable Personal Access Token account` | airtableTokenApi | `B2hRHQungck3WMoE` | 전 워크플로우 |
 | `Slack account` | slackApi | `NAh6hd7VFXGqksqK` | 예외·운영 알림 (`#ops-*`) |
-| `Gmail OAuth2 API` | gmailOAuth2 | `SycEHwXNU8mv9tYf` | (예비) |
+| `Gmail OAuth2 API` | gmailOAuth2 | `SycEHwXNU8mv9tYf` | #7b 환영 이메일 발송 (발신 주소 응대용 확인 필요) |
 | `Tally account` | tallyApi | `sLfpnRidgWIwFqHe` | (예비 — #7a는 Tally → n8n webhook 수신이라 직접 불필요) |
 | `tally-webhook-secret` | _예정_ | _미생성_ | #7a HMAC 검증 (사용자가 Tally signing secret 발급 후) |
 
@@ -330,9 +330,8 @@
 
 ### 트리거 (이중 구조)
 
-- **Xero webhook** (`INVOICE.UPDATE`) — 절대 다수 처리, 실시간
-- **n8n cron 매시간 :05** — webhook 유실 대비 폴링 폴백
-- 두 트리거 모두 동일한 메인 처리 노드로 합류
+- **Xero webhook** (`INVOICE.UPDATE`) — 절대 다수 처리, 실시간. id `YqkAw7AJKw5uPBpv`.
+- **폴링 폴백 = 별도 워크플로우 `WF #3-poll` (`atQNwPt7B3QUBLBi`, 빌드 완료 2026-05-30)** — 매시간 :05 Schedule → Xero If-Modified-Since(now-65min)로 변경 인보이스 fetch → 각 InvoiceID를 #3 webhook으로 재투입(인보이스 1건당 1 POST, XERO_WEBHOOK_KEY 있으면 동일 키로 HMAC 서명). #3의 멱등 가드가 중복 재투입을 무해화. 메인 처리 노드 합류 대신 webhook 재호출로 로직 단일화.
 
 ### Webhook 검증
 
@@ -362,7 +361,7 @@
    - `outstanding = Σ AmountDue`
    - `overdue_count = COUNT(WHERE due_date < today)`
    - `overdue_amount = Σ AmountDue WHERE due_date < today`
-6. **Credit limit fetch**: `GET /Contacts/{contactId}` → Xero Contact의 credit limit 필드
+6. **Credit limit**: Airtable 고객 행의 `credit_limit` 필드 사용 (step 4에서 fetch된 행). 비어있으면 `∞`. (Xero Contact GET 불필요 — 별도 fetch 제거)
 7. **Hold 산출**:
    - `hold = (outstanding ≥ credit_limit) OR (overdue_count ≥ 1)`
    - `hold_reason` (우선순위):
@@ -399,7 +398,7 @@
 
 ### 관련 미결
 
-- credit_limit이 Xero Contact에 미설정인 경우 default: **`∞`로 간주(hold 안 걸림)** 권장 (Slack 경고만). 운영 시작 시점 재검토.
+- credit_limit = **Airtable 고객 테이블 필드** (`fldmZiwCKyybPcSCI`, 신설 2026-05-30). Compute Customer Hold가 읽어 `outstanding ≥ credit_limit` 비교. 비어있으면 `∞`로 간주(hold 안 걸림) → overdue만으로 판단. 온보딩 Credit Application 3 tier에 따라 영업/admin이 입력. (Xero Contact credit limit은 API push 안 와서 미사용)
 - `last_sync_at` 보관 위치: 기본 **n8n datatable**. Airtable settings 테이블로 옮길지는 운영 안정화 후 결정.
 
 ---
@@ -546,13 +545,15 @@
     - Airtable 오더 lookup: `고객 link` 비어있고 `(상호 == shop_name OR 배송주소 == delivery_address)` 후보 검색
     - 후보 0건 → skip
     - 후보 1건 이상 → **자동 link 금지**, Slack `#ops-onboarding` 알림 ("소급매칭 후보 N건 — admin 확인")
-12. **환영 이메일 발송** (조건부 wording):
-    - HubSpot Single-send transactional API (`POST /marketing/v3/transactional/single-email/send`)
+12. **환영 이메일 발송** (조건부 wording) — **확정 2026-05-30: Gmail 발송 + HubSpot CRM 로깅**:
+    - **채널 = Gmail OAuth2** (n8n credential `Gmail OAuth2 API` `SycEHwXNU8mv9tYf`). HubSpot single-send(Marketing Hub paid)·SMTP 대신 선택 — Workspace 메일박스 직접 발송, 추가 비용 X.
+    - 노드 체인: `Slack Post Success → Build Welcome Email → IF Has Email → [Send Welcome Email(Gmail) → Log Email to HubSpot / Respond Success]`
     - **분기 조건**: step 8의 `released_count > 0`?
-      - **Yes**: "Welcome + 기존 보류 주문 안내 + 매직링크" 템플릿 — 본문에 "기존 보류 주문 N건은 admin이 dispatch 처리합니다. **다음 오더부터는 아래 매직 링크를 사용해주세요** — 동일 링크 반복 사용 시 이중 주문 발생할 수 있습니다."
-      - **No**: 일반 "Welcome + 매직링크" 템플릿
-    - personalization: `magic_link_url = order.example.com/o/{magic_token}` (HubSpot magic_token property 또는 Airtable에서 가져옴), `shop_name`, `released_count` 등
-    - 실패 시 non-blocking → Slack `#ops-onboarding` 으로 admin 수동 발송 요청
+      - **Yes**: 본문에 "기존 보류 주문 N건은 곧 출하 처리됩니다. **다음 주문부터는 아래 매직 링크를 사용해주세요**."
+      - **No**: 일반 "Welcome + 매직링크"
+    - 매직 링크 = `env ORDER_SITE_BASE_URL + '/?token=' + 매직토큰` (Airtable 고객 `매직 토큰`, 없으면 HubSpot `magic_token` fallback). order-site 미구현이라 token 파라미터명·도메인은 빌드 후 조정.
+    - **CRM 활동 로그 (핵심 원칙)**: 발송 사실을 HubSpot Company 타임라인에 **email engagement**로 기록 — `POST /crm/v3/objects/emails` (`hs_email_direction=EMAIL`, `hs_email_status=SENT`, subject/text) + association `email→company` typeId **186**. 모든 커뮤니케이션을 고객(Company) 로그에 남겨 영업·admin이 흐름을 공유.
+    - 실패 시 non-blocking (onError continue). **잔여 stub**: ① Gmail OAuth 발신 주소가 응대용(orders@)인지 + Log의 from 표시 일치 확인, ② HubSpot Private App에 engagement write scope(`crm.objects.contacts.write`) 필요할 수 있음, ③ Log가 현재 Gmail 성공 여부 무관하게 SENT 기록 — 이상적으론 send 성공 게이트.
 13. **응답 200 반환**
 
 ### 멱등성
@@ -575,7 +576,7 @@
 
 ### 관련 미결
 
-- 환영 이메일을 n8n 직접 발송 vs HubSpot workflow 분리: 현재는 n8n 직접 (single-send API). 향후 HubSpot 템플릿 운영 안정화 시 HubSpot workflow로 옮기는 것도 옵션
+- 환영 이메일 채널: **확정 = n8n Gmail OAuth2 직접 발송 + HubSpot Company 타임라인 email engagement 로깅 (2026-05-30)**. 향후 HubSpot 템플릿 운영 안정화 시 HubSpot workflow로 옮기는 것도 옵션
 - `airtable_customer_id` / `xero_contact_id` HubSpot custom property 신설 여부 — 운영 디버깅에 유용하지만 필수 아님. 보류 가능
 
 ---

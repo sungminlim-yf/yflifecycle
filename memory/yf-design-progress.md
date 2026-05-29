@@ -11,6 +11,8 @@ metadata:
 
 **현재 phase = 운영 액션 집행 중 + 온보딩 폼 v2 + #7a 빌드 (2026-05-29 저녁)**. **n8n 워크플로우 #0·#1·#7a skeleton 빌드 완료** (#0 활성화됨 / #1·#7a inactive). **온보딩 폼 v2 publish 완료**: Tally `Me75K8` 단일 page, GoCardless EMBED 제거, COD 옵션 추가, Hidden field (hubspot_id·email_prefill), Legal entity·ABN 신규. **GoCardless 연결 패턴**: Tally redirect on completion + 별도 redirect page에서 동적 BRT 생성 (별도 작업). 자세한 진행상황은 아래 "운영 액션 진행 현황" 섹션.
 
+**2026-05-30 (집/맥북) — "운영 액션 마무리" A트랙 4건 완료**: ① **Airtable 고객 `credit_limit` 필드 신설** (`fldmZiwCKyybPcSCI`, currency) — #3 Compute Customer Hold가 이미 읽도록 작성돼 있어 필드만 추가하니 `outstanding ≥ credit_limit` 로직 활성화. ② **#3-polling fallback 워크플로우 신설** (`atQNwPt7B3QUBLBi`, 5노드, inactive, valid) — Schedule :05 → Xero If-Modified-Since(now-65m) → 변경 인보이스를 #3 webhook 재투입(HMAC 동일키 서명). `n8n/workflow-3-poll-skeleton.json`. ③ **#7b Phase 3 환영 이메일 완료** (#7b 22→**26노드**) — **Gmail OAuth2 발송**(cred `SycEHwXNU8mv9tYf`) + **HubSpot Company 타임라인 email engagement 로깅**(POST /crm/v3/objects/emails, email→company typeId 186, CRM 활동 로그 원칙). released_count 조건부 wording. 매직링크=env ORDER_SITE_BASE_URL+'/?token='+토큰. ④ **#1 컷오프 timezone DST-aware** — Validate Input의 02:00 UTC 하드코딩 → Intl.DateTimeFormat('Australia/Sydney') 이중패스로 전날 12pm Sydney 정확 계산. 문서 갱신: n8n/CLAUDE.md(#7b step12·#3 트리거·credit_limit), airtable/schema.md.
+
 설계 닫힌 영역: order-site UX, 가격/할인/배송비/DD, 온보딩 폼, **n8n 워크플로우 #1~#7 전부 (#2.5·#5 포함)**, **MOQ($150 grand subtotal), 배송비($5+GST, OUTPUT 10%), Xero Item Code(KAT/GAR/TER), Slack ops-* 매핑** (2026-05-28 추가 closure). #2.5는 Airtable trigger + payment term 필터 패턴(#1 결합 X), 결제 채널 = manual bank transfer, COD는 "주문 후 빠른 선결제 변형". **#5 (재무→HubSpot 공유)**: Airtable 고객 change trigger → HubSpot 3-property(Account Hold·Hold Reason·Outstanding) PATCH, 멱등 비교 skip, 확장 항목(overdue·credit limit·last payment)은 운영 시작 후 보강. `xero/` 도메인 미결 모두 해소. **`airtable/production-planning.md` v1 작성 + `schema.md`에 Production Plan/Schedule 2 테이블 + 제품 lookup 3필드 반영** (2026-05-28 추가). #3는 INVOICE.UPDATE webhook + 매시간 polling, #4(credit limit) #3에 통합. **온보딩 폼 #7 a/b 분할 설계 완료 (2026-05-28)**: #7a Tally webhook → 매칭(+forward 가드) → Airtable `Onboarding Submissions` staging → HubSpot Onboarding=form submitted → Slack. 영업 review에서 `Customer Group`(신설 HubSpot Company property) 지정 + Onboarding=approved. #7b HubSpot workflow webhook → Xero Contact 생성(discount % 그룹 기반) → Airtable 고객 행 + 토큰 발급 → 미배정 소급매칭 후보 Slack → 환영 이메일. 영업·고객·어드민 단일 진입 패턴 유지.
 
 라벨·박스 단위 갱신 반영 완료: KARAAGE·TERIYAKI 라벨(=bag) 2.5kg→4kg + **박스 = 2 bag = 8kg 확정**, 박스 단가 $32.50→$52→**$104** ([[product-source-files]]).
@@ -70,19 +72,18 @@ Xero 환경 확보 + Item 3개 등록 완료 ($78/$104/$104, EXEMPTOUTPUT) ([[xe
 - **Tally redirectOnCompletionUrl**: `https://youngfoods.app.n8n.cloud/webhook/onboarding-redirect-v1?response_id={response_id}` (#8 빌드 후).
 - **HubSpot Workflow `Company create → webhook` (옵션 A)**: Company 생성 시 → n8n #0 webhook POST. tier 안 되면 polling(옵션 B) 그대로.
 - **Xero Branding theme**: footer/payment instructions에 회사 계좌 (BSB·계좌번호) 입력. #2.5 Prepay/COD 인보이스 PDF에 자동 노출.
-- **Airtable 고객 테이블 credit_limit 필드 신설** (옵션, #3 hold 계산 robust성).
+- ~~Airtable 고객 credit_limit 필드~~ ✅ 완료 (2026-05-30, `fldmZiwCKyybPcSCI`). 값 입력은 온보딩 시 영업/admin.
+- **#7b 가동 전**: Gmail OAuth2 발신 주소가 응대용(orders@ 등)인지 확인 + HubSpot Private App에 engagement write scope(`crm.objects.contacts.write`) 필요시 추가.
 - **GoCardless 계정** + API key → n8n credential `gocardless-api-key` (#8 빌드 unlock).
 - **ClickSend 알파태그** `YoungFoods` 승인 확인 (~2026-05-30, #6a/b unlock).
 - **HubSpot 테스트 Company `266741551606` archive** (테스트 데이터 정리).
 
 ### ⏳ 다음 픽업 시 추천 작업 순서 (집/맥북)
 
-1. `git pull` (이번 밤 9 commit 받기: `42e06a1`...`a2fa4e2`).
-2. **#3-polling 별도 워크플로우 빌드** (task #23 pending) — n8n_create_workflow 인자 차근차근. Schedule trigger(매시간 :05) → Compute Since(now-65min) → Fetch Modified Invoices → Extract IDs → POST per invoice to #3 webhook.
-3. **컷오프 timezone 정밀화** (#1 Validate Input): Sydney AEST/AEDT DST aware (Intl.DateTimeFormat 또는 수동).
-4. **워크플로우 manual test** — 사용자 손작업 일부 완료 후 #5 → #7a → #7b → #2.5 → #2 → #3 순으로 1건씩 trigger.
-5. **운영 가동 체크리스트 문서**: 사용자 가동 직전 단계별 안내.
-6. **#7b Phase 3 환영 이메일 stub** (Marketing Hub plan 확인 또는 Gmail 대안).
+1. ~~#3-polling 빌드~~ ✅ (2026-05-30, `atQNwPt7B3QUBLBi`). ~~컷오프 timezone~~ ✅. ~~#7b Phase 3 환영 이메일~~ ✅ (Gmail+CRM 로깅).
+2. **워크플로우 manual test** — 사용자 손작업 일부 완료 후 #5 → #7a → #7b → #2.5 → #2 → #3 순으로 1건씩 trigger. (#7b 테스트 시 Gmail 발신·HubSpot engagement scope 확인)
+3. **운영 가동 체크리스트 문서**: 사용자 가동 직전 단계별 안내 (B트랙 사용자 UI 작업 = Airtable Automation 4건 + Xero/Tally webhook·signing key + Xero Branding theme + GoCardless/ClickSend).
+4. **#3-poll·#1·#7b 등 manual 실행 검증** (특히 #1 컷오프 DST 계산 실측, #3-poll HMAC 패리티).
 
 ### ⏳ 그 이후
 - `YoungFoods` 알파태그 승인 확인 (대시보드/이메일, ~2026-05-30)

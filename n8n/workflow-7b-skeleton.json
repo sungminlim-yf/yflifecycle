@@ -8,7 +8,7 @@
     "saveDataSuccessExecution": "all",
     "saveManualExecutions": true
   },
-  "_note": "22 노드 (Phase 1 + Phase 2 보강 완료). 본체는 n8n_get_workflow id=pvvhhs5expWOfJce로 가져올 수 있음.",
+  "_note": "26 노드 (Phase 1 + Phase 2 + Phase 3 완료). 본체는 n8n_get_workflow id=pvvhhs5expWOfJce로 가져올 수 있음.",
   "_overview": {
     "trigger": "Webhook (path /tally-approved-propagate-v1, Airtable Automation 호출 — Onboarding Submissions.status=approved)",
     "phase_1_done": [
@@ -20,9 +20,17 @@
       "Soft match for guest orders: Search Soft Match(filterByFormula 고객 빈 link + (상호==shop_name OR 배송주소==delivery_address)) → Soft Match Decision(Slack 메시지 빌드) → IF Has Soft Match → [Slack Soft Match Alert / skip]",
       "자동 link 금지, admin 수동 처리"
     ],
-    "phase_3_stub_todos": [
-      "환영 이메일 — HubSpot single-send transactional API (Marketing Hub paid plan 필요) 또는 Gmail OAuth2 직접 발송",
-      "조건부 wording: released_count > 0이면 '기존 hold 오더 N건 dispatch 진행, 다음 오더부터 매직 링크 사용', == 0이면 일반 환영"
+    "phase_3_done": [
+      "환영 이메일 = Gmail OAuth2 발송 (credential SycEHwXNU8mv9tYf). Slack Post Success → Build Welcome Email → IF Has Email → [Send Welcome Email(Gmail) → Log Email to HubSpot / Respond Success]",
+      "조건부 wording: released_count > 0이면 '기존 hold 오더 N건 출하 처리, 다음 주문부터 매직 링크 사용', == 0이면 일반 환영",
+      "CRM 활동 로그: 발송 사실을 HubSpot Company 타임라인에 email engagement로 기록 (POST /crm/v3/objects/emails, email→company association typeId=186)",
+      "매직 링크 = env ORDER_SITE_BASE_URL + '/?token=' + Airtable 고객 '매직 토큰' (HubSpot magic_token fallback)"
+    ],
+    "phase_3_remaining_stub": [
+      "Gmail OAuth 발신 주소가 고객 응대용(orders@ 등)인지 + Log Email from 표시와 일치 — 사용자 확인",
+      "HubSpot Private App에 engagement write scope(crm.objects.contacts.write) 필요할 수 있음 — Log Email 실행 시 확인",
+      "Log Email은 현재 Gmail 성공 여부와 무관하게 SENT 기록 (onError continue) — 이상적으로는 send 성공 게이트",
+      "order-site 미구현이라 token 파라미터명·도메인 미확정 — 빌드 후 Build Welcome Email 조정"
     ]
   }
 }

@@ -13,15 +13,14 @@
     "trigger": "Webhook (path /xero-invoice-update-v1, Xero INVOICE.UPDATE)",
     "flow": "Webhook → Parse → IF Should Process → [Fetch Xero Invoice → Find Airtable Order → Compute Order Update(멱등) → IF Order Needs Update → [Update Order / skip] → Find Airtable Customer → Fetch AR Invoices(outstanding 재계산) → Compute Customer Hold(overdue/credit_limit) → IF Customer Needs Update → [Update Customer / skip] → Respond Success] / Respond Skipped]",
     "stub_todos": [
-      "HMAC-SHA256 verify x-xero-signature header with webhook key",
-      "Polling fallback (매시간 :05) — 별도 Schedule trigger 또는 워크플로우",
-      "credit_limit 필드 Airtable 고객 테이블에 추가 (현재 없음, overdue만으로 hold 결정)",
-      "고객 매칭 실패 시 Slack #ops-accounts 알림 + 오더 매칭 실패 시 Slack 알림"
+      "HMAC-SHA256 verify: 노드 추가됨 (Verify HMAC, env XERO_WEBHOOK_KEY 있으면 검증/없으면 stub valid). 실 Xero webhook은 원본 raw bytes로 검증해야 정확 — 현재 JSON.stringify(파싱객체) 재직렬화 방식이라 실 webhook 검증 정밀화 필요.",
+      "credit_limit: 해소 (2026-05-30 Airtable 고객 fldmZiwCKyybPcSCI 신설, Compute Customer Hold가 이미 참조)",
+      "Polling fallback: 해소 (별도 워크플로우 WF #3-poll atQNwPt7B3QUBLBi 빌드, workflow-3-poll-skeleton.json)",
+      "고객 매칭 실패 시 Slack #ops-accounts 알림 + 오더 매칭 실패 시 Slack 알림 (미구현)"
     ],
     "user_action_required": [
       "Xero developer console → webhook 등록 (https://youngfoods.app.n8n.cloud/webhook/xero-invoice-update-v1)",
-      "Xero webhook signing key → n8n credential xero-webhook-key 등록 (HMAC 검증용)",
-      "(옵션) Airtable 고객 테이블에 credit_limit (currency) 필드 추가"
+      "Xero webhook signing key → n8n env XERO_WEBHOOK_KEY 설정 (HMAC 검증용, 없으면 stub mode 자동 통과)"
     ]
   }
 }
