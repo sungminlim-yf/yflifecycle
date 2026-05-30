@@ -40,7 +40,10 @@ textarea { min-height: 60px; resize: vertical; }
 .result.ok { background: #e6f7ed; border: 1px solid #34c759; }
 .result.err { background: #fdecea; border: 1px solid #e74c3c; }
 .toggle { display: flex; align-items: center; gap: 8px; font-size: 14px; margin: 6px 0; }
-.langbar { display: flex; justify-content: flex-end; gap: 6px; margin-bottom: 10px; }
+.zoombar { display: flex; gap: 6px; margin-bottom: 8px; }
+.zoombtn { min-width: 38px; height: 32px; border: 1px solid #d0d0d0; background: #fff; border-radius: 16px; font-size: 15px; cursor: pointer; color: #444; }
+.zoombtn:active { background: #eef3fb; }
+.langbar { display: flex; flex-wrap: wrap; justify-content: flex-end; gap: 6px; margin-bottom: 10px; }
 .langbtn { padding: 5px 12px; border: 1px solid #d0d0d0; background: #fff; border-radius: 16px; font-size: 13px; cursor: pointer; color: #555; }
 .langbtn.active { background: #1f6feb; border-color: #1f6feb; color: #fff; font-weight: 600; }
 .shopcard { border: 1px solid #1f6feb33; }
@@ -48,7 +51,9 @@ textarea { min-height: 60px; resize: vertical; }
 .card.collapse { padding: 0; }
 .collapse-head { width: 100%; display: flex; align-items: center; justify-content: space-between; background: none; border: none; padding: 13px 16px; font-size: 13px; font-weight: 600; color: #777; cursor: pointer; text-align: left; }
 .collapse-head .chev { color: #aaa; font-size: 12px; }
+.collapse-head .tap-hint { color: #aaa; font-weight: 400; font-size: 12px; }
 .collapse-body { padding: 0 16px 16px; }
+.submit.compact { padding: 9px; font-size: 14px; }
 .shoprow { display: flex; justify-content: space-between; gap: 12px; padding: 6px 0; font-size: 14px; border-bottom: 1px solid #f0f0f0; }
 .shoprow:last-child { border-bottom: none; }
 .shoprow .muted { flex-shrink: 0; }

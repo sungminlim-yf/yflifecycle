@@ -45,6 +45,8 @@ const STRINGS = {
     recoverBtn: 'Email me my link',
     recoverSent: "If your email is registered, we've sent your order link. Please check your inbox.",
     recoverSending: 'Sending…',
+    recoverTapHint: '(tap to open)',
+    recoverGuestHint: "Can't remember your email either? You can still order as a guest — just fill in the details below.",
   },
   ko: {
     langName: '한국어',
@@ -79,6 +81,8 @@ const STRINGS = {
     recoverBtn: '이메일로 링크 받기',
     recoverSent: '등록된 이메일이라면 주문 링크를 보냈습니다. 받은편지함을 확인해 주세요.',
     recoverSending: '전송 중…',
+    recoverTapHint: '(여기를 클릭)',
+    recoverGuestHint: '복구 이메일도 기억나지 않으시면, 아래 정보를 작성해 게스트로 바로 주문하셔도 됩니다.',
   },
   zh: {
     langName: '中文',
@@ -113,6 +117,8 @@ const STRINGS = {
     recoverBtn: '通过邮箱发送链接',
     recoverSent: '如果您的邮箱已注册，我们已发送您的订购链接。请查收邮件。',
     recoverSending: '发送中…',
+    recoverTapHint: '(点击展开)',
+    recoverGuestHint: '也不记得邮箱了？您可以在下方填写信息，以访客身份下单。',
   },
   ja: {
     langName: '日本語',
@@ -147,6 +153,8 @@ const STRINGS = {
     recoverBtn: 'メールでリンクを受け取る',
     recoverSent: 'メールアドレスが登録されていれば、注文リンクを送信しました。受信箱をご確認ください。',
     recoverSending: '送信中…',
+    recoverTapHint: '(タップで開く)',
+    recoverGuestHint: 'メールも思い出せない場合は、下記にご記入のうえゲストとしてご注文いただけます。',
   },
   th: {
     langName: 'ไทย',
@@ -181,6 +189,8 @@ const STRINGS = {
     recoverBtn: 'ส่งลิงก์ทางอีเมล',
     recoverSent: 'หากอีเมลของคุณลงทะเบียนไว้ เราได้ส่งลิงก์สั่งซื้อแล้ว กรุณาตรวจสอบกล่องจดหมาย',
     recoverSending: 'กำลังส่ง…',
+    recoverTapHint: '(แตะเพื่อเปิด)',
+    recoverGuestHint: 'จำอีเมลไม่ได้ด้วย? คุณสามารถกรอกข้อมูลด้านล่างเพื่อสั่งซื้อแบบผู้เยี่ยมชมได้',
   },
   es: {
     langName: 'Español',
@@ -215,6 +225,8 @@ const STRINGS = {
     recoverBtn: 'Enviarme mi enlace por correo',
     recoverSent: 'Si tu correo está registrado, te hemos enviado tu enlace de pedido. Revisa tu bandeja de entrada.',
     recoverSending: 'Enviando…',
+    recoverTapHint: '(toca para abrir)',
+    recoverGuestHint: '¿Tampoco recuerdas tu correo? Puedes pedir como invitado completando los datos de abajo.',
   },
 };
 
@@ -242,6 +254,7 @@ const isAscii = (s) => /^[\x20-\x7E]*$/.test(s);
 
 export default function Page() {
   const [lang, setLang] = useState('en');
+  const [fontScale, setFontScale] = useState(1); // 글씨 크기 (zoom 0.9~1.3)
   const [token, setToken] = useState(null);
   const [ready, setReady] = useState(false);
   const [shop, setShop] = useState(null); // resolved customer info
@@ -272,6 +285,8 @@ export default function Page() {
     setIdemKey(crypto.randomUUID());
     const savedLang = localStorage.getItem('yf_lang');
     if (savedLang && STRINGS[savedLang]) setLang(savedLang);
+    const savedZoom = parseFloat(localStorage.getItem('yf_zoom'));
+    if (savedZoom >= 0.9 && savedZoom <= 1.3) setFontScale(savedZoom);
     setReady(true);
     if (tk) {
       setShopState('loading');
@@ -288,6 +303,12 @@ export default function Page() {
   function switchLang(l) {
     setLang(l);
     localStorage.setItem('yf_lang', l);
+  }
+
+  function setZoom(v) {
+    const z = Math.min(1.3, Math.max(0.9, Math.round(v * 10) / 10));
+    setFontScale(z);
+    localStorage.setItem('yf_zoom', String(z));
   }
 
   const isGuest = !token;
@@ -379,7 +400,12 @@ export default function Page() {
   if (!ready) return null;
 
   return (
-    <div className="wrap">
+    <div className="wrap" style={{ zoom: fontScale }}>
+      <div className="zoombar">
+        <button className="zoombtn" onClick={() => setZoom(fontScale - 0.1)} aria-label="Smaller text">A−</button>
+        <button className="zoombtn" onClick={() => setZoom(1)} aria-label="Reset text size">↺</button>
+        <button className="zoombtn" onClick={() => setZoom(fontScale + 0.1)} aria-label="Larger text">A+</button>
+      </div>
       <div className="langbar">
         {Object.keys(STRINGS).map((l) => (
           <button key={l} className={'langbtn' + (l === lang ? ' active' : '')} onClick={() => switchLang(l)}>
@@ -404,7 +430,7 @@ export default function Page() {
       {isGuest && (
         <div className="card collapse">
           <button type="button" className="collapse-head" aria-expanded={recoverOpen} onClick={() => setRecoverOpen((o) => !o)}>
-            <span>{t.recoverTitle}</span>
+            <span>{t.recoverTitle} <span className="tap-hint">{t.recoverTapHint}</span></span>
             <span className="chev">{recoverOpen ? '▾' : '▸'}</span>
           </button>
           {recoverOpen && (
@@ -415,7 +441,7 @@ export default function Page() {
                 <>
                   <input type="email" value={recoverEmail} onChange={(e) => setRecoverEmail(e.target.value)} placeholder={t.recoverPh} />
                   <button
-                    className="submit secondary"
+                    className="submit secondary compact"
                     style={{ marginTop: 10 }}
                     disabled={!recoverEmail.trim() || recoverState === 'sending'}
                     onClick={recover}
@@ -424,6 +450,7 @@ export default function Page() {
                   </button>
                 </>
               )}
+              <p className="muted" style={{ marginTop: 10 }}>{t.recoverGuestHint}</p>
             </div>
           )}
         </div>
