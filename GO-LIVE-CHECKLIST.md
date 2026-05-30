@@ -33,7 +33,7 @@
 - [ ] **0-1. HubSpot Private App scope 확인** — `Settings → Integrations → Private Apps → (companies read App)`
   - `crm.objects.companies.write` (✅ #0 가동 시 추가됨)
   - **`crm.objects.contacts.write`** ← #7b의 "Log Email to HubSpot"(email engagement 생성)에 필요할 수 있음. 없으면 추가.
-- [ ] **0-2. Gmail 발신 주소 확인** — n8n credential `Gmail OAuth2 API` (`SycEHwXNU8mv9tYf`)가 연결된 계정이 **고객 응대용 주소**(예: `orders@youngfoods.com.au`)인지 확인. #7b 환영 이메일 발신자가 됨. 개인 주소면 공용 주소로 재인증 권장.
+- [ ] **0-2. Gmail 발신 주소 = `hello@youngfoods.com.au`로 재인증** — n8n credential `Gmail OAuth2 API` (`SycEHwXNU8mv9tYf`)를 **hello@ 계정으로 Reconnect**. 이 credential은 **#6c(분실복구)·#7b(환영) 둘 다 공유** → 한 번 재인증하면 둘 다 hello@ 발신. Gmail 노드는 From 입력 없음(인증 계정=발신 주소). OAuth 동의화면이 "테스트" 모드면 hello@를 테스트 사용자로 추가. _(2026-05-31 결정: 둘 다 hello@ 통일.)_
 - [ ] **0-3. Xero Branding theme 회사 계좌** — Xero `Settings → Invoice settings → Branding theme` footer/payment instructions에 **BSB·계좌번호** 입력. #2.5(Prepay/COD) 인보이스 PDF에 자동 노출 (manual bank transfer 안내).
 - [ ] **0-4. Xero Item Code 3종 확인** — `KAT`/`GAR`/`TER` 등록됨 (✅ 완료). 변동 없으면 skip.
 
