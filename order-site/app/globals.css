@@ -27,9 +27,15 @@ label { display: block; font-size: 13px; color: #555; margin: 10px 0 4px; }
 input[type=text], input[type=date], input[type=tel], input[type=email], textarea {
   width: 100%; padding: 9px 11px; border: 1px solid #d0d0d0; border-radius: 8px; font-size: 14px;
 }
+/* iOS Safari는 date input에서 width:100%를 무시하고 프레임 밖으로 넘침 → appearance 제거 + min-width:0로 고정 */
+input[type=date] { -webkit-appearance: none; appearance: none; min-width: 0; max-width: 100%; }
 textarea { min-height: 60px; resize: vertical; }
 .submit { width: 100%; padding: 14px; border: none; border-radius: 12px; background: #1f6feb; color: #fff; font-size: 16px; font-weight: 700; cursor: pointer; }
 .submit:disabled { background: #b8c4d6; cursor: not-allowed; }
+.submit.done { background: #34c759; cursor: default; }
+.submit.done:disabled { background: #34c759; cursor: default; }
+.submit.secondary { background: #fff; color: #1f6feb; border: 2px solid #1f6feb; }
+.submit.secondary:disabled { background: #fff; color: #b8c4d6; border-color: #d0d0d0; }
 .result { padding: 14px; border-radius: 10px; margin-top: 14px; font-size: 14px; white-space: pre-wrap; }
 .result.ok { background: #e6f7ed; border: 1px solid #34c759; }
 .result.err { background: #fdecea; border: 1px solid #e74c3c; }

@@ -10,18 +10,18 @@ const PRODUCTS = [
 ];
 const MOQ = 150;
 
-// EN/KO 사전. 새 언어 추가 시 키 동일하게 블록만 추가.
+// 다국어 사전. 새 언어 추가 시 키 동일하게 블록만 추가.
 const STRINGS = {
   en: {
     langName: 'English',
     magicTitle: 'Your dedicated order page',
     magicSub: 'Please confirm the shop below is yours. If not, do not order — contact your sales rep.',
     guestTitle: 'Young Foods Order',
-    guestSub: 'Guest order. Already registered? Get your private link by phone/email.',
+    guestSub: 'Guest order. Already registered? Get your private link by email below.',
     resolving: 'Loading your shop info…',
     invalidLink: '⚠️ This link is invalid or expired. Please request a new one.',
     confirmShop: 'Is this your shop?',
-    fShop: 'Shop', fContact: 'Contact', fPhone: 'Phone', fAddress: 'Address', fPayment: 'Payment term',
+    fShop: 'Shop', fContact: 'Contact', fPhone: 'Phone', fAddress: 'Delivery address', fPayment: 'Payment term',
     guestInfo: 'Shop details',
     lShop: 'Shop name', lPhone: 'Phone', lAddress: 'Delivery address', lEmail: 'Email (optional)',
     reqShop: 'Shop name', reqPhone: '04xx xxx xxx', reqAddr: 'Delivery address',
@@ -29,22 +29,28 @@ const STRINGS = {
     summary: 'Order summary', emptyCart: 'Add items to your cart.',
     boxes: 'boxes', subtotal: 'Subtotal (list price)',
     delivery: 'Delivery', deliveryFree: '(free over $300)', deliveryFee: '($5 + GST)', free: 'Free',
-    estTotal: 'Estimated total (ref.)', discountNote: 'Group discount is applied automatically on the invoice.',
+    estTotal: 'Estimated total (ref.)', discountNote: 'A promotion or discount may be applied on the final invoice.',
     moqNote: 'Minimum order $150 (list price)', moqShort: (n) => `Add $${n} more to place the order.`,
     deliverySec: 'Delivery', deliveryDate: 'Requested delivery date',
     cutoffNote: 'Cutoff = 12pm the day before delivery (Sydney). Server rejects if past.',
     overrideToggle: 'Deliver this order to a different address', overridePh: 'This order delivery address',
     noteLabel: 'Order note (optional)', notePh: 'Requests',
     submit: 'Place order', submitting: 'Submitting…',
+    submitted: '✓ Order submitted', newOrder: 'Place another order',
     okMsg: (no) => `✅ Order received: ${no}`, errMsg: 'Could not place order',
     nameEnglishOnly: 'Shop name must be entered in English only.',
+    recoverTitle: 'Lost your link?',
+    recoverPh: 'Your registered email',
+    recoverBtn: 'Email me my link',
+    recoverSent: "If your email is registered, we've sent your order link. Please check your inbox.",
+    recoverSending: 'Sending…',
   },
   ko: {
     langName: '한국어',
     magicTitle: '전용 주문 페이지',
     magicSub: '아래 가게가 내 가게가 맞는지 확인하세요. 아니라면 주문하지 말고 담당 영업사원에게 연락해 주세요.',
     guestTitle: 'Young Foods 주문',
-    guestSub: '게스트 주문입니다. 이미 등록된 가게면 전화번호/이메일로 전용 링크를 받으세요.',
+    guestSub: '게스트 주문입니다. 이미 등록된 가게라면 아래에서 이메일로 전용 링크를 받으세요.',
     resolving: '가게 정보를 불러오는 중…',
     invalidLink: '⚠️ 유효하지 않거나 만료된 링크입니다. 재발급을 요청해 주세요.',
     confirmShop: '이 가게가 맞나요?',
@@ -56,26 +62,32 @@ const STRINGS = {
     summary: '주문 요약', emptyCart: '품목을 담아주세요.',
     boxes: '박스', subtotal: '소계 (정가)',
     delivery: '배송비', deliveryFree: '(소계 $300↑ 무료)', deliveryFee: '($5 + GST)', free: '무료',
-    estTotal: '예상 합계 (참고)', discountNote: '그룹 할인은 인보이스 발행 시 자동 적용됩니다.',
+    estTotal: '예상 합계 (참고)', discountNote: '프로모션 또는 할인이 인보이스에 적용될 수 있습니다.',
     moqNote: '최소 주문 금액 $150 (정가 기준)', moqShort: (n) => `$${n} 더 담으면 주문 가능합니다.`,
     deliverySec: '배송', deliveryDate: '희망 배송일',
     cutoffNote: '컷오프 = 배송 전날 12pm (Sydney). 초과 시 서버가 거부합니다.',
     overrideToggle: '이번 주문만 다른 곳으로 받기', overridePh: '이번 주문 배송지',
     noteLabel: '주문 메모 (선택)', notePh: '요청사항',
     submit: '주문하기', submitting: '제출 중…',
+    submitted: '✓ 주문 제출 완료', newOrder: '추가 주문하기',
     okMsg: (no) => `✅ 주문 접수: ${no}`, errMsg: '주문에 실패했습니다',
     nameEnglishOnly: '상호는 영문만 입력 가능합니다.',
+    recoverTitle: '링크를 잃어버리셨나요?',
+    recoverPh: '등록된 이메일',
+    recoverBtn: '이메일로 링크 받기',
+    recoverSent: '등록된 이메일이라면 주문 링크를 보냈습니다. 받은편지함을 확인해 주세요.',
+    recoverSending: '전송 중…',
   },
   zh: {
     langName: '中文',
     magicTitle: '专属订购页面',
     magicSub: '请确认以下店铺是您的店铺。如不是，请勿下单 — 请联系您的销售代表。',
     guestTitle: 'Young Foods 订购',
-    guestSub: '访客订购。已注册？请通过电话/邮箱获取专属链接。',
+    guestSub: '访客订购。已注册？请在下方通过邮箱获取专属链接。',
     resolving: '正在加载店铺信息…',
     invalidLink: '⚠️ 此链接无效或已过期。请重新申请。',
     confirmShop: '这是您的店铺吗？',
-    fShop: '店铺', fContact: '联系人', fPhone: '电话', fAddress: '地址', fPayment: '付款方式',
+    fShop: '店铺', fContact: '联系人', fPhone: '电话', fAddress: '配送地址', fPayment: '付款方式',
     guestInfo: '店铺信息',
     lShop: '店铺名', lPhone: '电话', lAddress: '配送地址', lEmail: '邮箱（可选）',
     reqShop: '店铺名称', reqPhone: '0412 345 678', reqAddr: '配送地址',
@@ -83,15 +95,120 @@ const STRINGS = {
     summary: '订单摘要', emptyCart: '请添加商品。',
     boxes: '箱', subtotal: '小计（标价）',
     delivery: '运费', deliveryFree: '（满$300免运费）', deliveryFee: '（$5 + GST）', free: '免费',
-    estTotal: '预计总额（参考）', discountNote: '团体折扣将在开具发票时自动应用。',
+    estTotal: '预计总额（参考）', discountNote: '发票可能会应用促销或折扣。',
     moqNote: '最低订购金额 $150（标价）', moqShort: (n) => `再添加 $${n} 即可下单。`,
     deliverySec: '配送', deliveryDate: '期望配送日期',
     cutoffNote: '截止 = 配送前一天中午12点（悉尼）。超过则服务器拒绝。',
     overrideToggle: '本次订单送至其他地址', overridePh: '本次订单配送地址',
     noteLabel: '订单备注（可选）', notePh: '要求',
     submit: '下单', submitting: '提交中…',
+    submitted: '✓ 订单已提交', newOrder: '再下一单',
     okMsg: (no) => `✅ 订单已接收：${no}`, errMsg: '下单失败',
     nameEnglishOnly: '店铺名称只能使用英文。',
+    recoverTitle: '丢失了链接？',
+    recoverPh: '您的注册邮箱',
+    recoverBtn: '通过邮箱发送链接',
+    recoverSent: '如果您的邮箱已注册，我们已发送您的订购链接。请查收邮件。',
+    recoverSending: '发送中…',
+  },
+  ja: {
+    langName: '日本語',
+    magicTitle: '専用注文ページ',
+    magicSub: '以下の店舗がご自身の店舗かご確認ください。違う場合は注文せず、担当営業にご連絡ください。',
+    guestTitle: 'Young Foods 注文',
+    guestSub: 'ゲスト注文です。登録済みの場合は、下記からメールで専用リンクを受け取れます。',
+    resolving: '店舗情報を読み込み中…',
+    invalidLink: '⚠️ このリンクは無効か期限切れです。再発行をご依頼ください。',
+    confirmShop: 'この店舗で合っていますか？',
+    fShop: '店舗', fContact: '担当者', fPhone: '電話', fAddress: '配送先', fPayment: 'お支払い条件',
+    guestInfo: '店舗情報',
+    lShop: '店舗名', lPhone: '電話', lAddress: '配送先住所', lEmail: 'メール（任意）',
+    reqShop: '店舗名', reqPhone: '0412 345 678', reqAddr: '配送先住所',
+    products: '注文商品（箱単位）', boxKg: 'kg/箱', perBox: '/箱',
+    summary: '注文内容', emptyCart: '商品を追加してください。',
+    boxes: '箱', subtotal: '小計（定価）',
+    delivery: '配送料', deliveryFree: '（$300以上で無料）', deliveryFee: '（$5 + GST）', free: '無料',
+    estTotal: '合計の目安（参考）', discountNote: 'プロモーションまたは割引が請求書に適用される場合があります。',
+    moqNote: '最低注文金額 $150（定価）', moqShort: (n) => `あと $${n} で注文できます。`,
+    deliverySec: '配送', deliveryDate: '希望配送日',
+    cutoffNote: '締切 = 配送前日の正午12時（シドニー）。超過するとサーバーが拒否します。',
+    overrideToggle: 'この注文だけ別の住所に届ける', overridePh: 'この注文の配送先',
+    noteLabel: '注文メモ（任意）', notePh: 'ご要望',
+    submit: '注文する', submitting: '送信中…',
+    submitted: '✓ 注文を送信しました', newOrder: '追加で注文する',
+    okMsg: (no) => `✅ 注文を受け付けました：${no}`, errMsg: '注文に失敗しました',
+    nameEnglishOnly: '店舗名は英語のみ入力可能です。',
+    recoverTitle: 'リンクを紛失しましたか？',
+    recoverPh: '登録済みのメールアドレス',
+    recoverBtn: 'メールでリンクを受け取る',
+    recoverSent: 'メールアドレスが登録されていれば、注文リンクを送信しました。受信箱をご確認ください。',
+    recoverSending: '送信中…',
+  },
+  th: {
+    langName: 'ไทย',
+    magicTitle: 'หน้าสั่งซื้อเฉพาะของคุณ',
+    magicSub: 'โปรดยืนยันว่าร้านด้านล่างเป็นร้านของคุณ หากไม่ใช่ กรุณาอย่าสั่งซื้อ — ติดต่อตัวแทนขายของคุณ',
+    guestTitle: 'Young Foods สั่งซื้อ',
+    guestSub: 'การสั่งซื้อแบบผู้เยี่ยมชม ลงทะเบียนแล้ว? รับลิงก์เฉพาะของคุณทางอีเมลด้านล่าง',
+    resolving: 'กำลังโหลดข้อมูลร้าน…',
+    invalidLink: '⚠️ ลิงก์นี้ไม่ถูกต้องหรือหมดอายุ กรุณาขอลิงก์ใหม่',
+    confirmShop: 'นี่คือร้านของคุณใช่ไหม?',
+    fShop: 'ร้าน', fContact: 'ผู้ติดต่อ', fPhone: 'โทรศัพท์', fAddress: 'ที่อยู่จัดส่ง', fPayment: 'เงื่อนไขการชำระเงิน',
+    guestInfo: 'ข้อมูลร้าน',
+    lShop: 'ชื่อร้าน', lPhone: 'โทรศัพท์', lAddress: 'ที่อยู่จัดส่ง', lEmail: 'อีเมล (ไม่บังคับ)',
+    reqShop: 'ชื่อร้าน', reqPhone: '0412 345 678', reqAddr: 'ที่อยู่จัดส่ง',
+    products: 'รายการสั่งซื้อ (ต่อกล่อง)', boxKg: 'กก./กล่อง', perBox: '/กล่อง',
+    summary: 'สรุปคำสั่งซื้อ', emptyCart: 'กรุณาเพิ่มสินค้า',
+    boxes: 'กล่อง', subtotal: 'ยอดรวมย่อย (ราคาปกติ)',
+    delivery: 'ค่าจัดส่ง', deliveryFree: '(ฟรีเมื่อเกิน $300)', deliveryFee: '($5 + GST)', free: 'ฟรี',
+    estTotal: 'ยอดรวมโดยประมาณ (อ้างอิง)', discountNote: 'อาจมีการใช้โปรโมชันหรือส่วนลดในใบแจ้งหนี้',
+    moqNote: 'ยอดสั่งซื้อขั้นต่ำ $150 (ราคาปกติ)', moqShort: (n) => `เพิ่มอีก $${n} เพื่อสั่งซื้อ`,
+    deliverySec: 'การจัดส่ง', deliveryDate: 'วันที่ต้องการจัดส่ง',
+    cutoffNote: 'กำหนดตัดยอด = เที่ยงวันก่อนวันจัดส่ง (ซิดนีย์) หากเกินกำหนด เซิร์ฟเวอร์จะปฏิเสธ',
+    overrideToggle: 'จัดส่งคำสั่งนี้ไปยังที่อยู่อื่น', overridePh: 'ที่อยู่จัดส่งสำหรับคำสั่งนี้',
+    noteLabel: 'หมายเหตุคำสั่งซื้อ (ไม่บังคับ)', notePh: 'คำขอ',
+    submit: 'สั่งซื้อ', submitting: 'กำลังส่ง…',
+    submitted: '✓ ส่งคำสั่งซื้อแล้ว', newOrder: 'สั่งซื้อเพิ่ม',
+    okMsg: (no) => `✅ รับคำสั่งซื้อแล้ว: ${no}`, errMsg: 'ไม่สามารถสั่งซื้อได้',
+    nameEnglishOnly: 'ชื่อร้านต้องกรอกเป็นภาษาอังกฤษเท่านั้น',
+    recoverTitle: 'ลิงก์หายหรือไม่?',
+    recoverPh: 'อีเมลที่ลงทะเบียนไว้',
+    recoverBtn: 'ส่งลิงก์ทางอีเมล',
+    recoverSent: 'หากอีเมลของคุณลงทะเบียนไว้ เราได้ส่งลิงก์สั่งซื้อแล้ว กรุณาตรวจสอบกล่องจดหมาย',
+    recoverSending: 'กำลังส่ง…',
+  },
+  es: {
+    langName: 'Español',
+    magicTitle: 'Tu página de pedidos exclusiva',
+    magicSub: 'Confirma que la tienda de abajo es la tuya. Si no lo es, no hagas el pedido — contacta a tu representante de ventas.',
+    guestTitle: 'Pedido Young Foods',
+    guestSub: 'Pedido como invitado. ¿Ya estás registrado? Recibe tu enlace privado por correo electrónico abajo.',
+    resolving: 'Cargando la información de tu tienda…',
+    invalidLink: '⚠️ Este enlace no es válido o ha caducado. Solicita uno nuevo.',
+    confirmShop: '¿Es esta tu tienda?',
+    fShop: 'Tienda', fContact: 'Contacto', fPhone: 'Teléfono', fAddress: 'Dirección de entrega', fPayment: 'Condiciones de pago',
+    guestInfo: 'Datos de la tienda',
+    lShop: 'Nombre de la tienda', lPhone: 'Teléfono', lAddress: 'Dirección de entrega', lEmail: 'Correo electrónico (opcional)',
+    reqShop: 'Nombre de la tienda', reqPhone: '0412 345 678', reqAddr: 'Dirección de entrega',
+    products: 'Artículos del pedido (por caja)', boxKg: 'kg/caja', perBox: '/caja',
+    summary: 'Resumen del pedido', emptyCart: 'Añade artículos al carrito.',
+    boxes: 'cajas', subtotal: 'Subtotal (precio de lista)',
+    delivery: 'Envío', deliveryFree: '(gratis desde $300)', deliveryFee: '($5 + GST)', free: 'Gratis',
+    estTotal: 'Total estimado (ref.)', discountNote: 'Es posible que se aplique una promoción o descuento en la factura.',
+    moqNote: 'Pedido mínimo $150 (precio de lista)', moqShort: (n) => `Añade $${n} más para realizar el pedido.`,
+    deliverySec: 'Entrega', deliveryDate: 'Fecha de entrega deseada',
+    cutoffNote: 'Cierre = 12 p. m. del día anterior a la entrega (Sídney). El servidor rechaza si se supera.',
+    overrideToggle: 'Entregar este pedido en otra dirección', overridePh: 'Dirección de entrega de este pedido',
+    noteLabel: 'Nota del pedido (opcional)', notePh: 'Solicitudes',
+    submit: 'Realizar pedido', submitting: 'Enviando…',
+    submitted: '✓ Pedido enviado', newOrder: 'Realizar otro pedido',
+    okMsg: (no) => `✅ Pedido recibido: ${no}`, errMsg: 'No se pudo realizar el pedido',
+    nameEnglishOnly: 'El nombre de la tienda debe ingresarse solo en inglés.',
+    recoverTitle: '¿Perdiste tu enlace?',
+    recoverPh: 'Tu correo registrado',
+    recoverBtn: 'Enviarme mi enlace por correo',
+    recoverSent: 'Si tu correo está registrado, te hemos enviado tu enlace de pedido. Revisa tu bandeja de entrada.',
+    recoverSending: 'Enviando…',
   },
 };
 
@@ -121,6 +238,8 @@ export default function Page() {
   const [submitting, setSubmitting] = useState(false);
   const [result, setResult] = useState(null);
   const [idemKey, setIdemKey] = useState('');
+  const [recoverEmail, setRecoverEmail] = useState('');
+  const [recoverState, setRecoverState] = useState('idle'); // idle|sending|sent
 
   const t = STRINGS[lang];
 
@@ -160,9 +279,35 @@ export default function Page() {
   const guestOk = !isGuest || (storeName.trim() && phone.trim() && address.trim());
   const nameOk = !isGuest || !storeName.trim() || isAscii(storeName.trim());
   const canSubmit = lines.length > 0 && moqOk && guestOk && nameOk && !submitting;
+  const submitted = !!(result && result.status >= 200 && result.status < 300 && result.data?.ok);
 
   function setQ(sku, v) {
     setQty((prev) => ({ ...prev, [sku]: Math.max(0, Math.floor(v) || 0) }));
+  }
+
+  // 매직링크 분실 복구 — 등록 이메일로 링크 발송 요청. enumeration 차단 위해
+  // 등록 여부와 무관하게 항상 동일한 안내를 보여준다.
+  async function recover() {
+    if (!recoverEmail.trim() || recoverState === 'sending') return;
+    setRecoverState('sending');
+    try {
+      await fetch('/api/recover', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email: recoverEmail.trim() }),
+      });
+    } catch (e) { /* 동일 응답 정책 — 에러도 흡수 */ }
+    setRecoverState('sent');
+  }
+
+  function newOrder() {
+    setQty({});
+    setNote('');
+    setOverrideOn(false);
+    setOverrideAddr('');
+    setResult(null);
+    setIdemKey(crypto.randomUUID());
+    if (typeof window !== 'undefined') window.scrollTo({ top: 0, behavior: 'smooth' });
   }
 
   async function submit() {
@@ -192,7 +337,6 @@ export default function Page() {
       });
       const data = await r.json();
       setResult({ status: r.status, data });
-      if (r.ok && data && data.ok) setIdemKey(crypto.randomUUID());
     } catch (e) {
       setResult({ status: 0, data: { error: String(e) } });
     } finally {
@@ -257,6 +401,28 @@ export default function Page() {
         </div>
       )}
 
+      {/* 매직링크 분실 복구 (게스트 화면에서만) — 등록 이메일로 전용 링크 발송 */}
+      {isGuest && (
+        <div className="card">
+          <h2>{t.recoverTitle}</h2>
+          {recoverState === 'sent' ? (
+            <p className="muted">{t.recoverSent}</p>
+          ) : (
+            <>
+              <input type="email" value={recoverEmail} onChange={(e) => setRecoverEmail(e.target.value)} placeholder={t.recoverPh} />
+              <button
+                className="submit secondary"
+                style={{ marginTop: 10 }}
+                disabled={!recoverEmail.trim() || recoverState === 'sending'}
+                onClick={recover}
+              >
+                {recoverState === 'sending' ? t.recoverSending : t.recoverBtn}
+              </button>
+            </>
+          )}
+        </div>
+      )}
+
       <div className="card">
         <h2>{t.products}</h2>
         {PRODUCTS.map((p) => (
@@ -279,7 +445,7 @@ export default function Page() {
         {lines.length === 0 && <p className="muted">{t.emptyCart}</p>}
         {lines.map((p) => (
           <div className="row" key={p.sku}>
-            <span>{p.code} × {p.q}{t.boxes}</span>
+            <span>{p.code} × {p.q} {t.boxes}</span>
             <span>${(p.boxPrice * p.q).toLocaleString()}</span>
           </div>
         ))}
@@ -312,17 +478,22 @@ export default function Page() {
         <textarea value={note} onChange={(e) => setNote(e.target.value)} placeholder={t.notePh} />
       </div>
 
-      <button className="submit" disabled={!canSubmit} onClick={submit}>
-        {submitting ? t.submitting : t.submit}
-      </button>
+      {submitted ? (
+        <>
+          <button className="submit done" disabled>{t.submitted}</button>
+          <button className="submit secondary" style={{ marginTop: 10 }} onClick={newOrder}>{t.newOrder}</button>
+        </>
+      ) : (
+        <button className="submit" disabled={!canSubmit} onClick={submit}>
+          {submitting ? t.submitting : t.submit}
+        </button>
+      )}
 
       {result && (
-        <div className={`result ${result.status >= 200 && result.status < 300 && result.data?.ok ? 'ok' : 'err'}`}>
-          {result.status >= 200 && result.status < 300 && result.data?.ok
+        <div className={`result ${submitted ? 'ok' : 'err'}`}>
+          {submitted
             ? t.okMsg(result.data.order_no || '')
             : `⚠️ ${t.errMsg}: ${result.data?.error_code || result.status}`}
-          {'\n'}
-          {JSON.stringify(result.data, null, 2)}
         </div>
       )}
     </div>
