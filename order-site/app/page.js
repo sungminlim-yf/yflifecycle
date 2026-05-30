@@ -27,6 +27,8 @@ const STRINGS = {
     invalidLink: '⚠️ This link is invalid or expired. Please request a new one.',
     confirmShop: 'Please confirm your details',
     fShop: 'Shop', fContact: 'Contact', fPhone: 'Phone', fAddress: 'Delivery address', fPayment: 'Payment term',
+    editBtn: 'Edit', saveBtn: 'Save', cancelBtn: 'Cancel', savedMsg: 'Saved ✓', saveErr: 'Could not save',
+    editHint: 'Contact or phone changed? Edit here — your orders are unaffected.',
     guestInfo: 'Shop details',
     lShop: 'Shop name', lPhone: 'Phone', lAddress: 'Delivery address', lEmail: 'Email (optional)',
     reqShop: 'Shop name', reqPhone: '04xx xxx xxx', reqAddr: 'Delivery address',
@@ -68,6 +70,8 @@ const STRINGS = {
     invalidLink: '⚠️ 유효하지 않거나 만료된 링크입니다. 재발급을 요청해 주세요.',
     confirmShop: '아래 정보를 확인해 주세요',
     fShop: '상호', fContact: '담당자', fPhone: '연락처', fAddress: '배송지', fPayment: '결제 조건',
+    editBtn: '수정', saveBtn: '저장', cancelBtn: '취소', savedMsg: '저장되었습니다 ✓', saveErr: '저장 실패',
+    editHint: '연락처·담당자가 바뀌었나요? 여기서 수정하세요 — 주문에는 영향 없습니다.',
     guestInfo: '가게 정보',
     lShop: '상호', lPhone: '연락처', lAddress: '배송지', lEmail: '이메일 (선택)',
     reqShop: '가게명', reqPhone: '0412 345 678', reqAddr: '배송 주소',
@@ -109,6 +113,8 @@ const STRINGS = {
     invalidLink: '⚠️ 此链接无效或已过期。请重新申请。',
     confirmShop: '请确认以下信息',
     fShop: '店铺', fContact: '联系人', fPhone: '电话', fAddress: '配送地址', fPayment: '付款方式',
+    editBtn: '修改', saveBtn: '保存', cancelBtn: '取消', savedMsg: '已保存 ✓', saveErr: '保存失败',
+    editHint: '联系人或电话有变动？在此修改 — 不影响您的订单。',
     guestInfo: '店铺信息',
     lShop: '店铺名', lPhone: '电话', lAddress: '配送地址', lEmail: '邮箱（可选）',
     reqShop: '店铺名称', reqPhone: '0412 345 678', reqAddr: '配送地址',
@@ -150,6 +156,8 @@ const STRINGS = {
     invalidLink: '⚠️ このリンクは無効か期限切れです。再発行をご依頼ください。',
     confirmShop: '内容をご確認ください',
     fShop: '店舗', fContact: '担当者', fPhone: '電話', fAddress: '配送先', fPayment: 'お支払い条件',
+    editBtn: '編集', saveBtn: '保存', cancelBtn: 'キャンセル', savedMsg: '保存しました ✓', saveErr: '保存できませんでした',
+    editHint: '担当者や電話番号が変わりましたか？こちらで編集 — 注文には影響しません。',
     guestInfo: '店舗情報',
     lShop: '店舗名', lPhone: '電話', lAddress: '配送先住所', lEmail: 'メール（任意）',
     reqShop: '店舗名', reqPhone: '0412 345 678', reqAddr: '配送先住所',
@@ -191,6 +199,8 @@ const STRINGS = {
     invalidLink: '⚠️ ลิงก์นี้ไม่ถูกต้องหรือหมดอายุ กรุณาขอลิงก์ใหม่',
     confirmShop: 'กรุณาตรวจสอบข้อมูลด้านล่าง',
     fShop: 'ร้าน', fContact: 'ผู้ติดต่อ', fPhone: 'โทรศัพท์', fAddress: 'ที่อยู่จัดส่ง', fPayment: 'เงื่อนไขการชำระเงิน',
+    editBtn: 'แก้ไข', saveBtn: 'บันทึก', cancelBtn: 'ยกเลิก', savedMsg: 'บันทึกแล้ว ✓', saveErr: 'บันทึกไม่สำเร็จ',
+    editHint: 'ผู้ติดต่อหรือเบอร์โทรเปลี่ยน? แก้ไขที่นี่ — ไม่กระทบคำสั่งซื้อ',
     guestInfo: 'ข้อมูลร้าน',
     lShop: 'ชื่อร้าน', lPhone: 'โทรศัพท์', lAddress: 'ที่อยู่จัดส่ง', lEmail: 'อีเมล (ไม่บังคับ)',
     reqShop: 'ชื่อร้าน', reqPhone: '0412 345 678', reqAddr: 'ที่อยู่จัดส่ง',
@@ -232,6 +242,8 @@ const STRINGS = {
     invalidLink: '⚠️ Este enlace no es válido o ha caducado. Solicita uno nuevo.',
     confirmShop: 'Confirma tus datos',
     fShop: 'Tienda', fContact: 'Contacto', fPhone: 'Teléfono', fAddress: 'Dirección de entrega', fPayment: 'Condiciones de pago',
+    editBtn: 'Editar', saveBtn: 'Guardar', cancelBtn: 'Cancelar', savedMsg: 'Guardado ✓', saveErr: 'No se pudo guardar',
+    editHint: '¿Cambió el contacto o teléfono? Edítalo aquí — no afecta tus pedidos.',
     guestInfo: 'Datos de la tienda',
     lShop: 'Nombre de la tienda', lPhone: 'Teléfono', lAddress: 'Dirección de entrega', lEmail: 'Correo electrónico (opcional)',
     reqShop: 'Nombre de la tienda', reqPhone: '0412 345 678', reqAddr: 'Dirección de entrega',
@@ -305,6 +317,11 @@ export default function Page() {
   const [recoverEmail, setRecoverEmail] = useState('');
   const [recoverState, setRecoverState] = useState('idle'); // idle|sending|sent
   const [recoverOpen, setRecoverOpen] = useState(false); // 분실복구 접기/펼치기 (기본 접힘)
+  const [editing, setEditing] = useState(false); // 연락처·담당자 인라인 편집
+  const [editContact, setEditContact] = useState('');
+  const [editPhone, setEditPhone] = useState('');
+  const [savingContact, setSavingContact] = useState(false);
+  const [contactMsg, setContactMsg] = useState(null); // 'saved' | 'err' | null
 
   const t = STRINGS[lang];
 
@@ -372,6 +389,36 @@ export default function Page() {
       });
     } catch (e) { /* 동일 응답 정책 — 에러도 흡수 */ }
     setRecoverState('sent');
+  }
+
+  function startEdit() {
+    setEditContact(shop?.contact || '');
+    setEditPhone(shop?.phone || '');
+    setContactMsg(null);
+    setEditing(true);
+  }
+  async function saveContact() {
+    setSavingContact(true);
+    setContactMsg(null);
+    try {
+      const r = await fetch('/api/update-contact', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ token, contact: editContact.trim(), phone: editPhone.trim() }),
+      });
+      const data = await r.json();
+      if (r.ok && data && data.ok) {
+        setShop((s) => ({ ...s, contact: editContact.trim(), phone: editPhone.trim() }));
+        setContactMsg('saved');
+        setEditing(false);
+      } else {
+        setContactMsg('err');
+      }
+    } catch (e) {
+      setContactMsg('err');
+    } finally {
+      setSavingContact(false);
+    }
   }
 
   function newOrder() {
@@ -497,10 +544,28 @@ export default function Page() {
           {shopState === 'found' && shop && (
             <>
               <div className="shoprow"><span className="muted">{t.fShop}</span><b>{shop.shop_name || '—'}</b></div>
-              {shop.contact ? <div className="shoprow"><span className="muted">{t.fContact}</span><span>{shop.contact}</span></div> : null}
-              {shop.phone ? <div className="shoprow"><span className="muted">{t.fPhone}</span><span>{shop.phone}</span></div> : null}
-              {shop.address ? <div className="shoprow"><span className="muted">{t.fAddress}</span><span>{shop.address}</span></div> : null}
-              {shop.payment_term ? <div className="shoprow"><span className="muted">{t.fPayment}</span><span>{shop.payment_term}</span></div> : null}
+              {editing ? (
+                <>
+                  <label>{t.fContact}</label>
+                  <input type="text" value={editContact} onChange={(e) => setEditContact(e.target.value)} />
+                  <label>{t.fPhone}</label>
+                  <input type="tel" value={editPhone} onChange={(e) => setEditPhone(e.target.value)} />
+                  <div className="edit-actions">
+                    <button className="submit secondary compact" disabled={savingContact} onClick={saveContact}>{savingContact ? t.submitting : t.saveBtn}</button>
+                    <button className="linkbtn" onClick={() => { setEditing(false); setContactMsg(null); }}>{t.cancelBtn}</button>
+                  </div>
+                </>
+              ) : (
+                <>
+                  {shop.contact ? <div className="shoprow"><span className="muted">{t.fContact}</span><span>{shop.contact}</span></div> : null}
+                  {shop.phone ? <div className="shoprow"><span className="muted">{t.fPhone}</span><span>{shop.phone}</span></div> : null}
+                  {shop.address ? <div className="shoprow"><span className="muted">{t.fAddress}</span><span>{shop.address}</span></div> : null}
+                  {shop.payment_term ? <div className="shoprow"><span className="muted">{t.fPayment}</span><span>{shop.payment_term}</span></div> : null}
+                  {contactMsg === 'saved' && <div className="muted" style={{ color: '#1f9d55', marginTop: 8 }}>{t.savedMsg}</div>}
+                  <div className="edit-hint"><span>{t.editHint}</span> <button className="linkbtn" onClick={startEdit}>{t.editBtn}</button></div>
+                </>
+              )}
+              {contactMsg === 'err' && <div className="warn">{t.saveErr}</div>}
             </>
           )}
         </div>

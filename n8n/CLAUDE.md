@@ -29,7 +29,7 @@
 | 오더 | `tbliaikQUIRawfMU7` | #1, #2, #2.5, #3 |
 | 라인아이템 | `tblVXVQzT1q8U0HJQ` | #1, #2, #2.5 |
 | 제품 | `tblaFB9HuIuocCV9s` | #1 (가격 lookup), #2, #2.5 |
-| 고객 | `tbl1kAgO2ISkSS3O6` | #3, #5, #6b, #6c, #7b |
+| 고객 | `tbl1kAgO2ISkSS3O6` | #3, #5, #6b, #6c, #7b, #R(resolve), #R2(contact update) |
 | SMS Log | `tbljXGJsa4Wa7PCA6` | #6a, #6b |
 | Onboarding Submissions | `tblWrkl7mDixzbpTK` | #7a, #7b |
 | Production Schedule | `tblaEhgO4A20iFIge` | (운영 입력, 워크플로우 트리거 X) |

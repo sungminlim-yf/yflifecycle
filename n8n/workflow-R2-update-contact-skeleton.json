@@ -1,0 +1,32 @@
+{
+  "id": "eKAS9xqfHzvwliZj",
+  "name": "WF #R2: update customer contact (order-site)",
+  "active": true,
+  "settings": {
+    "executionOrder": "v1",
+    "saveDataErrorExecution": "all",
+    "saveDataSuccessExecution": "all",
+    "saveManualExecutions": true
+  },
+  "_note": "10 노드. 신설·가동·E2E 완료 (2026-05-30). 본체는 n8n_get_workflow id=eKAS9xqfHzvwliZj. 등록 고객의 연락처·담당자 self-update (주문 무관).",
+  "_overview": {
+    "trigger": "Webhook (POST /yf-update-contact-v1, header auth = order-intake-token credential dY4EiGLUEsseUd4h — #1/#R/#6c와 동일). order-site /api/update-contact 프록시가 호출.",
+    "payload": "{ token, contact, phone }",
+    "flow": [
+      "Validate: token UUID 형식 검증, contact(≤120)·phone(≤40) trim, filter = {매직 토큰}=\"<token>\"",
+      "IF Token Valid: false → Respond Invalid",
+      "Search Customer: 고객 tbl1kAgO2ISkSS3O6 GET filterByFormula(매직 토큰), maxRecords 1",
+      "IF Found: false → Respond Invalid",
+      "Build Patch: 입력된 contact→담당자, phone→연락처 만 fields에 (빈값 skip), typecast",
+      "IF Has Fields: false → Respond OK(no-op)",
+      "Patch Customer: 고객 행 PATCH (담당자/연락처만)",
+      "Respond OK: { ok:true, updated }"
+    ],
+    "security": [
+      "토큰=인증: 매직 토큰 보유자만 자기 고객 행 수정",
+      "화이트리스트 필드만: 담당자·연락처. payment term·고객 그룹·hold·배송지·오더는 절대 안 건드림",
+      "오더 테이블 무관 → 진행 중 주문에 영향 없음"
+    ],
+    "frontend": "order-site magic 화면 '확인해 주세요' 카드 → '수정' 토글 → 담당자/연락처 입력 → /api/update-contact. 6개 언어."
+  }
+}
