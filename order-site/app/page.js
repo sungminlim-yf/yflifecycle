@@ -32,7 +32,8 @@ const STRINGS = {
     estTotal: 'Estimated total (ref.)', discountNote: 'A promotion or discount may be applied on the final invoice.',
     moqNote: 'Minimum order $150 (list price)', moqShort: (n) => `Add $${n} more to place the order.`,
     deliverySec: 'Delivery', deliveryDate: 'Requested delivery date',
-    cutoffNote: 'Cutoff = 12pm the day before delivery (Sydney). Server rejects if past.',
+    cutoffNote: 'Cutoff = 12pm the day before delivery.',
+    cutoffBumped: (d) => `The 12pm cutoff has passed. Earliest delivery is now ${d}. Please review and place the order again.`,
     overrideToggle: 'Deliver this order to a different address', overridePh: 'This order delivery address',
     noteLabel: 'Order note (optional)', notePh: 'Requests',
     submit: 'Place order', submitting: 'Submitting…',
@@ -65,7 +66,8 @@ const STRINGS = {
     estTotal: '예상 합계 (참고)', discountNote: '프로모션 또는 할인이 인보이스에 적용될 수 있습니다.',
     moqNote: '최소 주문 금액 $150 (정가 기준)', moqShort: (n) => `$${n} 더 담으면 주문 가능합니다.`,
     deliverySec: '배송', deliveryDate: '희망 배송일',
-    cutoffNote: '컷오프 = 배송 전날 12pm (Sydney). 초과 시 서버가 거부합니다.',
+    cutoffNote: '컷오프 = 배송 전날 낮 12시.',
+    cutoffBumped: (d) => `낮 12시 컷오프가 지나 가장 빠른 배송일이 ${d}(으)로 변경되었습니다. 확인 후 다시 주문해 주세요.`,
     overrideToggle: '이번 주문만 다른 곳으로 받기', overridePh: '이번 주문 배송지',
     noteLabel: '주문 메모 (선택)', notePh: '요청사항',
     submit: '주문하기', submitting: '제출 중…',
@@ -98,7 +100,8 @@ const STRINGS = {
     estTotal: '预计总额（参考）', discountNote: '发票可能会应用促销或折扣。',
     moqNote: '最低订购金额 $150（标价）', moqShort: (n) => `再添加 $${n} 即可下单。`,
     deliverySec: '配送', deliveryDate: '期望配送日期',
-    cutoffNote: '截止 = 配送前一天中午12点（悉尼）。超过则服务器拒绝。',
+    cutoffNote: '截止 = 配送前一天中午12点。',
+    cutoffBumped: (d) => `已过中午12点截止时间。最早配送日期现为 ${d}。请确认后重新下单。`,
     overrideToggle: '本次订单送至其他地址', overridePh: '本次订单配送地址',
     noteLabel: '订单备注（可选）', notePh: '要求',
     submit: '下单', submitting: '提交中…',
@@ -131,7 +134,8 @@ const STRINGS = {
     estTotal: '合計の目安（参考）', discountNote: 'プロモーションまたは割引が請求書に適用される場合があります。',
     moqNote: '最低注文金額 $150（定価）', moqShort: (n) => `あと $${n} で注文できます。`,
     deliverySec: '配送', deliveryDate: '希望配送日',
-    cutoffNote: '締切 = 配送前日の正午12時（シドニー）。超過するとサーバーが拒否します。',
+    cutoffNote: '締切 = 配送前日の正午12時。',
+    cutoffBumped: (d) => `正午12時の締切を過ぎました。最短配送日は ${d} になりました。ご確認のうえ再度ご注文ください。`,
     overrideToggle: 'この注文だけ別の住所に届ける', overridePh: 'この注文の配送先',
     noteLabel: '注文メモ（任意）', notePh: 'ご要望',
     submit: '注文する', submitting: '送信中…',
@@ -164,7 +168,8 @@ const STRINGS = {
     estTotal: 'ยอดรวมโดยประมาณ (อ้างอิง)', discountNote: 'อาจมีการใช้โปรโมชันหรือส่วนลดในใบแจ้งหนี้',
     moqNote: 'ยอดสั่งซื้อขั้นต่ำ $150 (ราคาปกติ)', moqShort: (n) => `เพิ่มอีก $${n} เพื่อสั่งซื้อ`,
     deliverySec: 'การจัดส่ง', deliveryDate: 'วันที่ต้องการจัดส่ง',
-    cutoffNote: 'กำหนดตัดยอด = เที่ยงวันก่อนวันจัดส่ง (ซิดนีย์) หากเกินกำหนด เซิร์ฟเวอร์จะปฏิเสธ',
+    cutoffNote: 'กำหนดตัดยอด = เที่ยงวันก่อนวันจัดส่ง',
+    cutoffBumped: (d) => `เลยกำหนดตัดยอดเที่ยงวันแล้ว วันจัดส่งเร็วที่สุดคือ ${d} กรุณาตรวจสอบและสั่งซื้ออีกครั้ง`,
     overrideToggle: 'จัดส่งคำสั่งนี้ไปยังที่อยู่อื่น', overridePh: 'ที่อยู่จัดส่งสำหรับคำสั่งนี้',
     noteLabel: 'หมายเหตุคำสั่งซื้อ (ไม่บังคับ)', notePh: 'คำขอ',
     submit: 'สั่งซื้อ', submitting: 'กำลังส่ง…',
@@ -197,7 +202,8 @@ const STRINGS = {
     estTotal: 'Total estimado (ref.)', discountNote: 'Es posible que se aplique una promoción o descuento en la factura.',
     moqNote: 'Pedido mínimo $150 (precio de lista)', moqShort: (n) => `Añade $${n} más para realizar el pedido.`,
     deliverySec: 'Entrega', deliveryDate: 'Fecha de entrega deseada',
-    cutoffNote: 'Cierre = 12 p. m. del día anterior a la entrega (Sídney). El servidor rechaza si se supera.',
+    cutoffNote: 'Cierre = 12 del mediodía del día anterior a la entrega.',
+    cutoffBumped: (d) => `Se pasó el cierre de las 12 del mediodía. La entrega más próxima ahora es ${d}. Revisa y realiza el pedido de nuevo.`,
     overrideToggle: 'Entregar este pedido en otra dirección', overridePh: 'Dirección de entrega de este pedido',
     noteLabel: 'Nota del pedido (opcional)', notePh: 'Solicitudes',
     submit: 'Realizar pedido', submitting: 'Enviando…',
@@ -217,6 +223,20 @@ function plusDaysISO(n) {
   return d.toISOString().slice(0, 10);
 }
 
+// 컷오프 = 배송 전날 낮 12시 (QLD/Brisbane 기준, 서머타임 없음).
+// 지금(=호출 시점) 기준 선택 가능한 가장 빠른 배송일을 ISO로 반환.
+// 정오 전이면 내일(D+1), 정오 이후면 모레(D+2). place order 시점에 재평가됨.
+function earliestDeliveryISO(now = new Date()) {
+  const dtf = new Intl.DateTimeFormat('en-CA', {
+    timeZone: 'Australia/Brisbane', year: 'numeric', month: '2-digit', day: '2-digit', hour: '2-digit', hour12: false,
+  });
+  const p = {};
+  for (const part of dtf.formatToParts(now)) p[part.type] = part.value;
+  const base = Date.UTC(+p.year, +p.month - 1, +p.day);
+  const addDays = +p.hour >= 12 ? 2 : 1;
+  return new Date(base + addDays * 86400000).toISOString().slice(0, 10);
+}
+
 // 상호는 영문(printable ASCII)만 — 생산·배송팀 가독성. 회사 공식 언어.
 const isAscii = (s) => /^[\x20-\x7E]*$/.test(s);
 
@@ -227,7 +247,8 @@ export default function Page() {
   const [shop, setShop] = useState(null); // resolved customer info
   const [shopState, setShopState] = useState('idle'); // idle|loading|found|notfound
   const [qty, setQty] = useState({});
-  const [deliveryDate, setDeliveryDate] = useState(plusDaysISO(3));
+  const [deliveryDate, setDeliveryDate] = useState(() => earliestDeliveryISO());
+  const [cutoffNotice, setCutoffNotice] = useState(null);
   const [overrideOn, setOverrideOn] = useState(false);
   const [overrideAddr, setOverrideAddr] = useState('');
   const [note, setNote] = useState('');
@@ -280,6 +301,7 @@ export default function Page() {
   const nameOk = !isGuest || !storeName.trim() || isAscii(storeName.trim());
   const canSubmit = lines.length > 0 && moqOk && guestOk && nameOk && !submitting;
   const submitted = !!(result && result.status >= 200 && result.status < 300 && result.data?.ok);
+  const earliest = earliestDeliveryISO(); // 렌더 시점 최소 배송일 (제출 시 재평가)
 
   function setQ(sku, v) {
     setQty((prev) => ({ ...prev, [sku]: Math.max(0, Math.floor(v) || 0) }));
@@ -306,11 +328,20 @@ export default function Page() {
     setOverrideOn(false);
     setOverrideAddr('');
     setResult(null);
+    setCutoffNotice(null);
     setIdemKey(crypto.randomUUID());
     if (typeof window !== 'undefined') window.scrollTo({ top: 0, behavior: 'smooth' });
   }
 
   async function submit() {
+    // 컷오프 판정 = place order 누른 "이 시점" 기준. 정오 지났으면 다음날 선택 불가 → 보정 후 재확인.
+    const earliestNow = earliestDeliveryISO();
+    if (deliveryDate < earliestNow) {
+      setDeliveryDate(earliestNow);
+      setCutoffNotice(earliestNow);
+      return;
+    }
+    setCutoffNotice(null);
     setSubmitting(true);
     setResult(null);
     const payload = {
@@ -467,8 +498,9 @@ export default function Page() {
       <div className="card">
         <h2>{t.deliverySec}</h2>
         <label>{t.deliveryDate}</label>
-        <input type="date" value={deliveryDate} min={plusDaysISO(1)} onChange={(e) => setDeliveryDate(e.target.value)} />
+        <input type="date" value={deliveryDate} min={earliest} onChange={(e) => { setDeliveryDate(e.target.value); setCutoffNotice(null); }} />
         <div className="muted" style={{ marginTop: 4 }}>{t.cutoffNote}</div>
+        {cutoffNotice && <div className="warn">{t.cutoffBumped(cutoffNotice)}</div>}
         <div className="toggle" style={{ marginTop: 12 }}>
           <input id="ov" type="checkbox" checked={overrideOn} onChange={(e) => setOverrideOn(e.target.checked)} />
           <label htmlFor="ov" style={{ margin: 0 }}>{t.overrideToggle}</label>
