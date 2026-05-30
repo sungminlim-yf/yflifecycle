@@ -14,7 +14,8 @@ const MOQ = 150;
 const STRINGS = {
   en: {
     langName: 'English',
-    magicTitle: 'Young Foods Order — Registered shop',
+    magicTitle: 'Young Foods Order',
+    magicTag: 'Registered shop',
     magicSub: 'Your dedicated order page',
     magicShopLine: (n) => `“${n}” dedicated order page`,
     magicNotYours: 'Not your shop?',
@@ -24,7 +25,7 @@ const STRINGS = {
     guestSub: 'Already registered? Get your private link by email below.',
     resolving: 'Loading your shop info…',
     invalidLink: '⚠️ This link is invalid or expired. Please request a new one.',
-    confirmShop: 'Is this your shop?',
+    confirmShop: 'Please confirm your details',
     fShop: 'Shop', fContact: 'Contact', fPhone: 'Phone', fAddress: 'Delivery address', fPayment: 'Payment term',
     guestInfo: 'Shop details',
     lShop: 'Shop name', lPhone: 'Phone', lAddress: 'Delivery address', lEmail: 'Email (optional)',
@@ -54,7 +55,8 @@ const STRINGS = {
   },
   ko: {
     langName: '한국어',
-    magicTitle: 'Young Foods 주문 — 등록된 가게',
+    magicTitle: 'Young Foods 주문',
+    magicTag: '등록된 가게',
     magicSub: '전용 주문 페이지',
     magicShopLine: (n) => `「${n}」 전용 주문 페이지`,
     magicNotYours: '내 가게가 아닌가요?',
@@ -64,7 +66,7 @@ const STRINGS = {
     guestSub: '이미 등록된 가게라면 아래에서 이메일로 전용 링크를 받으세요.',
     resolving: '가게 정보를 불러오는 중…',
     invalidLink: '⚠️ 유효하지 않거나 만료된 링크입니다. 재발급을 요청해 주세요.',
-    confirmShop: '이 가게가 맞나요?',
+    confirmShop: '아래 정보를 확인해 주세요',
     fShop: '상호', fContact: '담당자', fPhone: '연락처', fAddress: '배송지', fPayment: '결제 조건',
     guestInfo: '가게 정보',
     lShop: '상호', lPhone: '연락처', lAddress: '배송지', lEmail: '이메일 (선택)',
@@ -94,7 +96,8 @@ const STRINGS = {
   },
   zh: {
     langName: '中文',
-    magicTitle: 'Young Foods 订购 — 已注册店铺',
+    magicTitle: 'Young Foods 订购',
+    magicTag: '已注册店铺',
     magicSub: '专属订购页面',
     magicShopLine: (n) => `「${n}」专属订购页面`,
     magicNotYours: '不是您的店铺？',
@@ -104,7 +107,7 @@ const STRINGS = {
     guestSub: '已注册？请在下方通过邮箱获取专属链接。',
     resolving: '正在加载店铺信息…',
     invalidLink: '⚠️ 此链接无效或已过期。请重新申请。',
-    confirmShop: '这是您的店铺吗？',
+    confirmShop: '请确认以下信息',
     fShop: '店铺', fContact: '联系人', fPhone: '电话', fAddress: '配送地址', fPayment: '付款方式',
     guestInfo: '店铺信息',
     lShop: '店铺名', lPhone: '电话', lAddress: '配送地址', lEmail: '邮箱（可选）',
@@ -134,7 +137,8 @@ const STRINGS = {
   },
   ja: {
     langName: '日本語',
-    magicTitle: 'Young Foods 注文 — 登録店舗',
+    magicTitle: 'Young Foods 注文',
+    magicTag: '登録店舗',
     magicSub: '専用注文ページ',
     magicShopLine: (n) => `「${n}」専用注文ページ`,
     magicNotYours: 'あなたの店舗ではありませんか？',
@@ -144,7 +148,7 @@ const STRINGS = {
     guestSub: '登録済みの場合は、下記からメールで専用リンクを受け取れます。',
     resolving: '店舗情報を読み込み中…',
     invalidLink: '⚠️ このリンクは無効か期限切れです。再発行をご依頼ください。',
-    confirmShop: 'この店舗で合っていますか？',
+    confirmShop: '内容をご確認ください',
     fShop: '店舗', fContact: '担当者', fPhone: '電話', fAddress: '配送先', fPayment: 'お支払い条件',
     guestInfo: '店舗情報',
     lShop: '店舗名', lPhone: '電話', lAddress: '配送先住所', lEmail: 'メール（任意）',
@@ -174,7 +178,8 @@ const STRINGS = {
   },
   th: {
     langName: 'ไทย',
-    magicTitle: 'Young Foods สั่งซื้อ — ร้านที่ลงทะเบียน',
+    magicTitle: 'Young Foods สั่งซื้อ',
+    magicTag: 'ร้านที่ลงทะเบียน',
     magicSub: 'หน้าสั่งซื้อเฉพาะของคุณ',
     magicShopLine: (n) => `หน้าสั่งซื้อเฉพาะของ “${n}”`,
     magicNotYours: 'ไม่ใช่ร้านของคุณ?',
@@ -184,7 +189,7 @@ const STRINGS = {
     guestSub: 'ลงทะเบียนแล้ว? รับลิงก์เฉพาะของคุณทางอีเมลด้านล่าง',
     resolving: 'กำลังโหลดข้อมูลร้าน…',
     invalidLink: '⚠️ ลิงก์นี้ไม่ถูกต้องหรือหมดอายุ กรุณาขอลิงก์ใหม่',
-    confirmShop: 'นี่คือร้านของคุณใช่ไหม?',
+    confirmShop: 'กรุณาตรวจสอบข้อมูลด้านล่าง',
     fShop: 'ร้าน', fContact: 'ผู้ติดต่อ', fPhone: 'โทรศัพท์', fAddress: 'ที่อยู่จัดส่ง', fPayment: 'เงื่อนไขการชำระเงิน',
     guestInfo: 'ข้อมูลร้าน',
     lShop: 'ชื่อร้าน', lPhone: 'โทรศัพท์', lAddress: 'ที่อยู่จัดส่ง', lEmail: 'อีเมล (ไม่บังคับ)',
@@ -214,7 +219,8 @@ const STRINGS = {
   },
   es: {
     langName: 'Español',
-    magicTitle: 'Pedido Young Foods — Tienda registrada',
+    magicTitle: 'Pedido Young Foods',
+    magicTag: 'Tienda registrada',
     magicSub: 'Tu página de pedidos exclusiva',
     magicShopLine: (n) => `Página de pedidos exclusiva de “${n}”`,
     magicNotYours: '¿No es tu tienda?',
@@ -224,7 +230,7 @@ const STRINGS = {
     guestSub: '¿Ya estás registrado? Recibe tu enlace privado por correo electrónico abajo.',
     resolving: 'Cargando la información de tu tienda…',
     invalidLink: '⚠️ Este enlace no es válido o ha caducado. Solicita uno nuevo.',
-    confirmShop: '¿Es esta tu tienda?',
+    confirmShop: 'Confirma tus datos',
     fShop: 'Tienda', fContact: 'Contacto', fPhone: 'Teléfono', fAddress: 'Dirección de entrega', fPayment: 'Condiciones de pago',
     guestInfo: 'Datos de la tienda',
     lShop: 'Nombre de la tienda', lPhone: 'Teléfono', lAddress: 'Dirección de entrega', lEmail: 'Correo electrónico (opcional)',
@@ -310,7 +316,7 @@ export default function Page() {
     const savedLang = localStorage.getItem('yf_lang');
     if (savedLang && STRINGS[savedLang]) setLang(savedLang);
     const savedZoom = parseFloat(localStorage.getItem('yf_zoom'));
-    if (savedZoom >= 0.9 && savedZoom <= 1.3) setFontScale(savedZoom);
+    if (savedZoom >= 0.9 && savedZoom <= 1.6) setFontScale(savedZoom);
     setReady(true);
     if (tk) {
       setShopState('loading');
@@ -330,7 +336,7 @@ export default function Page() {
   }
 
   function setZoom(v) {
-    const z = Math.min(1.3, Math.max(0.9, Math.round(v * 10) / 10));
+    const z = Math.min(1.6, Math.max(0.9, Math.round(v * 10) / 10));
     setFontScale(z);
     localStorage.setItem('yf_zoom', String(z));
   }
@@ -426,9 +432,10 @@ export default function Page() {
   return (
     <div className="wrap" style={{ zoom: fontScale }}>
       <div className="zoombar">
-        <button className="zoombtn" onClick={() => setZoom(fontScale - 0.1)} aria-label="Smaller text">A−</button>
-        <button className="zoombtn" onClick={() => setZoom(1)} aria-label="Reset text size">↺</button>
-        <button className="zoombtn" onClick={() => setZoom(fontScale + 0.1)} aria-label="Larger text">A+</button>
+        <span className="zoomicon" aria-hidden="true">🔍</span>
+        <button className="zoombtn zsm" onClick={() => setZoom(fontScale - 0.1)} aria-label="Smaller text">A</button>
+        <button className="zoombtn zreset" onClick={() => setZoom(1)} aria-label="Reset text size">↺</button>
+        <button className="zoombtn zlg" onClick={() => setZoom(fontScale + 0.1)} aria-label="Larger text">A</button>
       </div>
       <div className="langbar">
         {Object.keys(STRINGS).map((l) => (
@@ -445,7 +452,7 @@ export default function Page() {
         </div>
       ) : (
         <div className="banner">
-          <h1>{t.magicTitle}</h1>
+          <h1>{t.magicTitle} <span className="banner-tag">{t.magicTag}</span></h1>
           <p>{shopState === 'found' && shop?.shop_name ? t.magicShopLine(shop.shop_name) : t.magicSub}</p>
           <p className="banner-alt">{t.magicNotYours} <a href="/">{t.magicGuestLink}</a></p>
         </div>

@@ -10,8 +10,8 @@ body {
 .banner h1 { font-size: 18px; margin: 0 0 4px; }
 .banner p { margin: 0; font-size: 13px; opacity: .9; }
 .banner-tag { display: inline-block; font-size: 12px; font-weight: 600; background: rgba(255,255,255,.22); padding: 2px 9px; border-radius: 11px; vertical-align: middle; margin-left: 6px; opacity: 1; }
-.banner-alt { margin-top: 7px !important; font-size: 13px; }
-.banner-alt a { color: #fff; font-weight: 700; text-decoration: underline; }
+.banner-alt { margin-top: 8px !important; font-size: 11px; opacity: .75; }
+.banner-alt a { color: #fff; font-weight: 600; text-decoration: underline; }
 .card { background: #fff; border-radius: 12px; padding: 16px; margin-bottom: 14px; box-shadow: 0 1px 3px rgba(0,0,0,.06); }
 .card h2 { font-size: 15px; margin: 0 0 12px; }
 .prod { display: flex; align-items: center; justify-content: space-between; padding: 10px 0; border-bottom: 1px solid #eee; }
@@ -43,9 +43,13 @@ textarea { min-height: 60px; resize: vertical; }
 .result.ok { background: #e6f7ed; border: 1px solid #34c759; }
 .result.err { background: #fdecea; border: 1px solid #e74c3c; }
 .toggle { display: flex; align-items: center; gap: 8px; font-size: 14px; margin: 6px 0; }
-.zoombar { display: flex; gap: 6px; margin-bottom: 8px; }
-.zoombtn { min-width: 38px; height: 32px; border: 1px solid #d0d0d0; background: #fff; border-radius: 16px; font-size: 15px; cursor: pointer; color: #444; }
+.zoombar { display: flex; align-items: center; gap: 6px; margin-bottom: 8px; }
+.zoomicon { font-size: 15px; margin-right: 2px; opacity: .7; }
+.zoombtn { min-width: 40px; height: 34px; display: inline-flex; align-items: center; justify-content: center; border: 1px solid #d0d0d0; background: #fff; border-radius: 16px; cursor: pointer; color: #333; line-height: 1; font-weight: 700; }
 .zoombtn:active { background: #eef3fb; }
+.zoombtn.zsm { font-size: 12px; }   /* 작은 A = 축소 */
+.zoombtn.zlg { font-size: 21px; }   /* 큰 A = 확대 */
+.zoombtn.zreset { font-size: 15px; font-weight: 400; color: #888; }
 .langbar { display: flex; flex-wrap: wrap; justify-content: flex-end; gap: 6px; margin-bottom: 10px; }
 .langbtn { padding: 5px 12px; border: 1px solid #d0d0d0; background: #fff; border-radius: 16px; font-size: 13px; cursor: pointer; color: #555; }
 .langbtn.active { background: #1f6feb; border-color: #1f6feb; color: #fff; font-weight: 600; }
