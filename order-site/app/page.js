@@ -261,6 +261,7 @@ export default function Page() {
   const [idemKey, setIdemKey] = useState('');
   const [recoverEmail, setRecoverEmail] = useState('');
   const [recoverState, setRecoverState] = useState('idle'); // idle|sending|sent
+  const [recoverOpen, setRecoverOpen] = useState(false); // 분실복구 접기/펼치기 (기본 접힘)
 
   const t = STRINGS[lang];
 
@@ -399,6 +400,35 @@ export default function Page() {
         </div>
       )}
 
+      {/* 분실 복구 (게스트 전용) — 배너 문구 바로 아래, 기본 접힘으로 Shop details에 무게를 둔다 */}
+      {isGuest && (
+        <div className="card collapse">
+          <button type="button" className="collapse-head" aria-expanded={recoverOpen} onClick={() => setRecoverOpen((o) => !o)}>
+            <span>{t.recoverTitle}</span>
+            <span className="chev">{recoverOpen ? '▾' : '▸'}</span>
+          </button>
+          {recoverOpen && (
+            <div className="collapse-body">
+              {recoverState === 'sent' ? (
+                <p className="muted">{t.recoverSent}</p>
+              ) : (
+                <>
+                  <input type="email" value={recoverEmail} onChange={(e) => setRecoverEmail(e.target.value)} placeholder={t.recoverPh} />
+                  <button
+                    className="submit secondary"
+                    style={{ marginTop: 10 }}
+                    disabled={!recoverEmail.trim() || recoverState === 'sending'}
+                    onClick={recover}
+                  >
+                    {recoverState === 'sending' ? t.recoverSending : t.recoverBtn}
+                  </button>
+                </>
+              )}
+            </div>
+          )}
+        </div>
+      )}
+
       {/* 매직링크 진입: 연결된 샵 정보 — 자체 인지 검토 */}
       {!isGuest && (
         <div className="card shopcard">
@@ -429,28 +459,6 @@ export default function Page() {
           <input type="text" value={address} onChange={(e) => setAddress(e.target.value)} placeholder={t.reqAddr} />
           <label>{t.lEmail}</label>
           <input type="email" value={email} onChange={(e) => setEmail(e.target.value)} placeholder="email@example.com" />
-        </div>
-      )}
-
-      {/* 매직링크 분실 복구 (게스트 화면에서만) — 등록 이메일로 전용 링크 발송 */}
-      {isGuest && (
-        <div className="card">
-          <h2>{t.recoverTitle}</h2>
-          {recoverState === 'sent' ? (
-            <p className="muted">{t.recoverSent}</p>
-          ) : (
-            <>
-              <input type="email" value={recoverEmail} onChange={(e) => setRecoverEmail(e.target.value)} placeholder={t.recoverPh} />
-              <button
-                className="submit secondary"
-                style={{ marginTop: 10 }}
-                disabled={!recoverEmail.trim() || recoverState === 'sending'}
-                onClick={recover}
-              >
-                {recoverState === 'sending' ? t.recoverSending : t.recoverBtn}
-              </button>
-            </>
-          )}
         </div>
       )}
 

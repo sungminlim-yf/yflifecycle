@@ -44,6 +44,11 @@ textarea { min-height: 60px; resize: vertical; }
 .langbtn { padding: 5px 12px; border: 1px solid #d0d0d0; background: #fff; border-radius: 16px; font-size: 13px; cursor: pointer; color: #555; }
 .langbtn.active { background: #1f6feb; border-color: #1f6feb; color: #fff; font-weight: 600; }
 .shopcard { border: 1px solid #1f6feb33; }
+/* 분실복구 접기/펼치기 — 기본 접힘, 시각적으로 가벼워 Shop details에 무게를 둔다 */
+.card.collapse { padding: 0; }
+.collapse-head { width: 100%; display: flex; align-items: center; justify-content: space-between; background: none; border: none; padding: 13px 16px; font-size: 13px; font-weight: 600; color: #777; cursor: pointer; text-align: left; }
+.collapse-head .chev { color: #aaa; font-size: 12px; }
+.collapse-body { padding: 0 16px 16px; }
 .shoprow { display: flex; justify-content: space-between; gap: 12px; padding: 6px 0; font-size: 14px; border-bottom: 1px solid #f0f0f0; }
 .shoprow:last-child { border-bottom: none; }
 .shoprow .muted { flex-shrink: 0; }
