@@ -37,6 +37,7 @@ const STRINGS = {
     noteLabel: 'Order note (optional)', notePh: 'Requests',
     submit: 'Place order', submitting: 'Submitting…',
     okMsg: (no) => `✅ Order received: ${no}`, errMsg: 'Could not place order',
+    nameEnglishOnly: 'Shop name must be entered in English only.',
   },
   ko: {
     langName: '한국어',
@@ -63,6 +64,34 @@ const STRINGS = {
     noteLabel: '주문 메모 (선택)', notePh: '요청사항',
     submit: '주문하기', submitting: '제출 중…',
     okMsg: (no) => `✅ 주문 접수: ${no}`, errMsg: '주문에 실패했습니다',
+    nameEnglishOnly: '상호는 영문만 입력 가능합니다.',
+  },
+  zh: {
+    langName: '中文',
+    magicTitle: '专属订购页面',
+    magicSub: '请确认以下店铺是您的店铺。如不是，请勿下单 — 请联系您的销售代表。',
+    guestTitle: 'Young Foods 订购',
+    guestSub: '访客订购。已注册？请通过电话/邮箱获取专属链接。',
+    resolving: '正在加载店铺信息…',
+    invalidLink: '⚠️ 此链接无效或已过期。请重新申请。',
+    confirmShop: '这是您的店铺吗？',
+    fShop: '店铺', fContact: '联系人', fPhone: '电话', fAddress: '地址', fPayment: '付款方式',
+    guestInfo: '店铺信息',
+    lShop: '店铺名', lPhone: '电话', lAddress: '配送地址', lEmail: '邮箱（可选）',
+    reqShop: '店铺名称', reqPhone: '0412 345 678', reqAddr: '配送地址',
+    products: '订购商品（按箱）', boxKg: '公斤/箱', perBox: '/箱',
+    summary: '订单摘要', emptyCart: '请添加商品。',
+    boxes: '箱', subtotal: '小计（标价）',
+    delivery: '运费', deliveryFree: '（满$300免运费）', deliveryFee: '（$5 + GST）', free: '免费',
+    estTotal: '预计总额（参考）', discountNote: '团体折扣将在开具发票时自动应用。',
+    moqNote: '最低订购金额 $150（标价）', moqShort: (n) => `再添加 $${n} 即可下单。`,
+    deliverySec: '配送', deliveryDate: '期望配送日期',
+    cutoffNote: '截止 = 配送前一天中午12点（悉尼）。超过则服务器拒绝。',
+    overrideToggle: '本次订单送至其他地址', overridePh: '本次订单配送地址',
+    noteLabel: '订单备注（可选）', notePh: '要求',
+    submit: '下单', submitting: '提交中…',
+    okMsg: (no) => `✅ 订单已接收：${no}`, errMsg: '下单失败',
+    nameEnglishOnly: '店铺名称只能使用英文。',
   },
 };
 
@@ -70,6 +99,9 @@ function plusDaysISO(n) {
   const d = new Date(Date.now() + n * 24 * 60 * 60 * 1000);
   return d.toISOString().slice(0, 10);
 }
+
+// 상호는 영문(printable ASCII)만 — 생산·배송팀 가독성. 회사 공식 언어.
+const isAscii = (s) => /^[\x20-\x7E]*$/.test(s);
 
 export default function Page() {
   const [lang, setLang] = useState('en');
@@ -126,7 +158,8 @@ export default function Page() {
   const deliveryFee = subtotal >= 300 ? 0 : 5.5;
   const moqOk = subtotal >= MOQ;
   const guestOk = !isGuest || (storeName.trim() && phone.trim() && address.trim());
-  const canSubmit = lines.length > 0 && moqOk && guestOk && !submitting;
+  const nameOk = !isGuest || !storeName.trim() || isAscii(storeName.trim());
+  const canSubmit = lines.length > 0 && moqOk && guestOk && nameOk && !submitting;
 
   function setQ(sku, v) {
     setQty((prev) => ({ ...prev, [sku]: Math.max(0, Math.floor(v) || 0) }));
@@ -214,6 +247,7 @@ export default function Page() {
           <h2>{t.guestInfo}</h2>
           <label>{t.lShop} *</label>
           <input type="text" value={storeName} onChange={(e) => setStoreName(e.target.value)} placeholder={t.reqShop} />
+          {storeName.trim() && !isAscii(storeName.trim()) && <div className="warn">{t.nameEnglishOnly}</div>}
           <label>{t.lPhone} *</label>
           <input type="tel" value={phone} onChange={(e) => setPhone(e.target.value)} placeholder={t.reqPhone} />
           <label>{t.lAddress} *</label>
