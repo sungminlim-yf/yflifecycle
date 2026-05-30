@@ -14,10 +14,14 @@ const MOQ = 150;
 const STRINGS = {
   en: {
     langName: 'English',
-    magicTitle: 'Your dedicated order page',
-    magicSub: 'Please confirm the shop below is yours. If not, do not order — contact your sales rep.',
+    magicTitle: 'Young Foods Order — Registered shop',
+    magicSub: 'Your dedicated order page',
+    magicShopLine: (n) => `“${n}” dedicated order page`,
+    magicNotYours: 'Not your shop?',
+    magicGuestLink: 'Order as a guest →',
     guestTitle: 'Young Foods Order',
-    guestSub: 'Guest order. Already registered? Get your private link by email below.',
+    guestTag: 'Guest order',
+    guestSub: 'Already registered? Get your private link by email below.',
     resolving: 'Loading your shop info…',
     invalidLink: '⚠️ This link is invalid or expired. Please request a new one.',
     confirmShop: 'Is this your shop?',
@@ -50,10 +54,14 @@ const STRINGS = {
   },
   ko: {
     langName: '한국어',
-    magicTitle: '전용 주문 페이지',
-    magicSub: '아래 가게가 내 가게가 맞는지 확인하세요. 아니라면 주문하지 말고 담당 영업사원에게 연락해 주세요.',
+    magicTitle: 'Young Foods 주문 — 등록된 가게',
+    magicSub: '전용 주문 페이지',
+    magicShopLine: (n) => `「${n}」 전용 주문 페이지`,
+    magicNotYours: '내 가게가 아닌가요?',
+    magicGuestLink: '손님으로 주문하기 →',
     guestTitle: 'Young Foods 주문',
-    guestSub: '게스트 주문입니다. 이미 등록된 가게라면 아래에서 이메일로 전용 링크를 받으세요.',
+    guestTag: '손님으로 주문',
+    guestSub: '이미 등록된 가게라면 아래에서 이메일로 전용 링크를 받으세요.',
     resolving: '가게 정보를 불러오는 중…',
     invalidLink: '⚠️ 유효하지 않거나 만료된 링크입니다. 재발급을 요청해 주세요.',
     confirmShop: '이 가게가 맞나요?',
@@ -86,10 +94,14 @@ const STRINGS = {
   },
   zh: {
     langName: '中文',
-    magicTitle: '专属订购页面',
-    magicSub: '请确认以下店铺是您的店铺。如不是，请勿下单 — 请联系您的销售代表。',
+    magicTitle: 'Young Foods 订购 — 已注册店铺',
+    magicSub: '专属订购页面',
+    magicShopLine: (n) => `「${n}」专属订购页面`,
+    magicNotYours: '不是您的店铺？',
+    magicGuestLink: '以访客身份订购 →',
     guestTitle: 'Young Foods 订购',
-    guestSub: '访客订购。已注册？请在下方通过邮箱获取专属链接。',
+    guestTag: '访客订购',
+    guestSub: '已注册？请在下方通过邮箱获取专属链接。',
     resolving: '正在加载店铺信息…',
     invalidLink: '⚠️ 此链接无效或已过期。请重新申请。',
     confirmShop: '这是您的店铺吗？',
@@ -122,10 +134,14 @@ const STRINGS = {
   },
   ja: {
     langName: '日本語',
-    magicTitle: '専用注文ページ',
-    magicSub: '以下の店舗がご自身の店舗かご確認ください。違う場合は注文せず、担当営業にご連絡ください。',
+    magicTitle: 'Young Foods 注文 — 登録店舗',
+    magicSub: '専用注文ページ',
+    magicShopLine: (n) => `「${n}」専用注文ページ`,
+    magicNotYours: 'あなたの店舗ではありませんか？',
+    magicGuestLink: 'ゲストとして注文 →',
     guestTitle: 'Young Foods 注文',
-    guestSub: 'ゲスト注文です。登録済みの場合は、下記からメールで専用リンクを受け取れます。',
+    guestTag: 'ゲスト注文',
+    guestSub: '登録済みの場合は、下記からメールで専用リンクを受け取れます。',
     resolving: '店舗情報を読み込み中…',
     invalidLink: '⚠️ このリンクは無効か期限切れです。再発行をご依頼ください。',
     confirmShop: 'この店舗で合っていますか？',
@@ -158,10 +174,14 @@ const STRINGS = {
   },
   th: {
     langName: 'ไทย',
-    magicTitle: 'หน้าสั่งซื้อเฉพาะของคุณ',
-    magicSub: 'โปรดยืนยันว่าร้านด้านล่างเป็นร้านของคุณ หากไม่ใช่ กรุณาอย่าสั่งซื้อ — ติดต่อตัวแทนขายของคุณ',
+    magicTitle: 'Young Foods สั่งซื้อ — ร้านที่ลงทะเบียน',
+    magicSub: 'หน้าสั่งซื้อเฉพาะของคุณ',
+    magicShopLine: (n) => `หน้าสั่งซื้อเฉพาะของ “${n}”`,
+    magicNotYours: 'ไม่ใช่ร้านของคุณ?',
+    magicGuestLink: 'สั่งซื้อแบบผู้เยี่ยมชม →',
     guestTitle: 'Young Foods สั่งซื้อ',
-    guestSub: 'การสั่งซื้อแบบผู้เยี่ยมชม ลงทะเบียนแล้ว? รับลิงก์เฉพาะของคุณทางอีเมลด้านล่าง',
+    guestTag: 'สั่งซื้อแบบผู้เยี่ยมชม',
+    guestSub: 'ลงทะเบียนแล้ว? รับลิงก์เฉพาะของคุณทางอีเมลด้านล่าง',
     resolving: 'กำลังโหลดข้อมูลร้าน…',
     invalidLink: '⚠️ ลิงก์นี้ไม่ถูกต้องหรือหมดอายุ กรุณาขอลิงก์ใหม่',
     confirmShop: 'นี่คือร้านของคุณใช่ไหม?',
@@ -194,10 +214,14 @@ const STRINGS = {
   },
   es: {
     langName: 'Español',
-    magicTitle: 'Tu página de pedidos exclusiva',
-    magicSub: 'Confirma que la tienda de abajo es la tuya. Si no lo es, no hagas el pedido — contacta a tu representante de ventas.',
+    magicTitle: 'Pedido Young Foods — Tienda registrada',
+    magicSub: 'Tu página de pedidos exclusiva',
+    magicShopLine: (n) => `Página de pedidos exclusiva de “${n}”`,
+    magicNotYours: '¿No es tu tienda?',
+    magicGuestLink: 'Pedir como invitado →',
     guestTitle: 'Pedido Young Foods',
-    guestSub: 'Pedido como invitado. ¿Ya estás registrado? Recibe tu enlace privado por correo electrónico abajo.',
+    guestTag: 'Pedido como invitado',
+    guestSub: '¿Ya estás registrado? Recibe tu enlace privado por correo electrónico abajo.',
     resolving: 'Cargando la información de tu tienda…',
     invalidLink: '⚠️ Este enlace no es válido o ha caducado. Solicita uno nuevo.',
     confirmShop: '¿Es esta tu tienda?',
@@ -416,13 +440,14 @@ export default function Page() {
 
       {isGuest ? (
         <div className="banner" style={{ background: '#444' }}>
-          <h1>{t.guestTitle}</h1>
+          <h1>{t.guestTitle} <span className="banner-tag">{t.guestTag}</span></h1>
           <p>{t.guestSub}</p>
         </div>
       ) : (
         <div className="banner">
           <h1>{t.magicTitle}</h1>
-          <p>{t.magicSub}</p>
+          <p>{shopState === 'found' && shop?.shop_name ? t.magicShopLine(shop.shop_name) : t.magicSub}</p>
+          <p className="banner-alt">{t.magicNotYours} <a href="/">{t.magicGuestLink}</a></p>
         </div>
       )}
 
