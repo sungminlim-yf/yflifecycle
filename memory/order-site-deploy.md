@@ -19,6 +19,8 @@ metadata:
 
 **도메인 구성 방침** (2026-05-30 결정): 서비스마다 호스팅이 달라 **서브도메인 방식** 채택 (path 방식은 단일 앱일 때만). order=Vercel, 향후 www/홈페이지=Squarespace, onboarding=Tally, customer/supplier/staff 포털=별도 서브도메인(또는 한 앱이면 app. 아래 path).
 
+**onboarding.youngfoods.com.au 가동** (2026-05-30): Tally Pro 커스텀 도메인. `onboarding` CNAME → `cname.tally.so` (Squarespace DNS), Tally 자동 SSL 🟢. 슬러그 없이 **루트에 폼 `Me75K8` 서빙** (전용 서브도메인). prefill: `…/?hubspot_id=…&email=…`. **남은 후속**: HubSpot 온보딩 이메일 템플릿 링크를 `tally.so/r/Me75K8` → `onboarding.youngfoods.com.au`로 교체(호스트만, HubSpot UI 수동). DNS는 Vercel `order`와 동일하게 Squarespace에서 관리.
+
 #7b 환영메일 매직링크 base URL = `https://order.youngfoods.com.au` 로 확정 (CLAUDE.md·README와 일치). [[yf-design-progress]]
 
 **2026-05-30 후속 (E2E 테스트 + 개선):**

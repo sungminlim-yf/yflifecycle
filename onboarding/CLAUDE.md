@@ -84,6 +84,7 @@
 ## 온보딩 폼 + GoCardless 연결
 
 - **플랫폼 = Tally** (운영용 폼 `Me75K8`, workspace `w4Pyvr`). MCP 이미 연결 → 폼 자동 관리 가능. 무료/저렴, conditional logic 강력. 폼 구조는 운영 중 진화 예정 ([[tally-onboarding-form]] 참조).
+- **커스텀 도메인 = `https://onboarding.youngfoods.com.au` (2026-05-30 가동)**. Tally Pro custom domain, `onboarding` CNAME → `cname.tally.so`. 슬러그 없이 **루트에 폼 서빙** (이 서브도메인은 온보딩 폼 전용). 폼 접근·prefill은 `tally.so/r/Me75K8` 대신 이 도메인 사용: `https://onboarding.youngfoods.com.au/?<params>`.
 - **단일 page 구조** (multi-page 안 함 — conditional + page navigation 충돌 회피). 섹션 시각 구분은 TEXT 라벨 + DIVIDER 사용.
 - **고객 그룹은 폼에 노출하지 않음** — HubSpot Company 생성 시점에 영업이 지정 (default `일반고객`, 가맹점/자매사만 `내부고객`). admin review 단계에서는 변경 안 함.
 
@@ -128,7 +129,8 @@
 영업사원·고객 셀프·어드민 누가 진행하든 동일한 진입점을 쓰는 단순 모델.
 
 1. **발송 = HubSpot 이메일 템플릿**. 본문의 Tally 링크에 HubSpot personalization token으로 `hubspot_id` (Company ID), `email` 등을 URL 파라미터로 prefill.
-   - 예: `https://tally.so/r/<form>?hubspot_id={{company.hs_object_id}}&email={{contact.email}}`
+   - 예 (커스텀 도메인, 2026-05-30~): `https://onboarding.youngfoods.com.au/?hubspot_id={{company.hs_object_id}}&email={{contact.email}}`
+   - (구: `https://tally.so/r/Me75K8?...` — 호스트만 교체, 쿼리 파라미터·hidden field 매칭은 동일. _주의: hidden field 명세는 `hubspot_id`/`email_prefill`인데 URL 예시는 `email` — 현 HubSpot 템플릿이 쓰는 파라미터명을 그대로 유지하고 호스트만 바꿀 것._)
 2. **Tally hidden field** 가 URL 파라미터를 받아 폼 UI에는 안 보이고 webhook payload에만 실림.
 3. **n8n webhook(워크플로우 #7a)** 이 payload 받자마자 `hubspot_id`로 HubSpot Company를 직접 매칭 → 수동 매칭 0. Airtable `Onboarding Submissions` staging 행 생성.
 4. **Forward 오염 가드**: hidden `hubspot_id` 있을 때, 폼 입력 `email` vs HubSpot Contact email cross-check. 불일치 → Slack `#ops-onboarding`, propagate 보류, **admin team이 판단**.
