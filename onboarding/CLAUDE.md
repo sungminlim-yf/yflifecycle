@@ -107,7 +107,7 @@
 | 옵션 | 분기 필드 | 후속 처리 |
 |---|---|---|
 | **Direct Debit (default 권장)** | 없음 (필드 추가 X) | Tally 완료 → redirect page → 동적 BRT 생성 → GoCardless flow URL로 자동 redirect. mandate 동의 후 자동 수금. |
-| **Credit Application** | Legal entity / ABN/ACN / Credit term (7 Days default · EOM) / Credit limit 요청액 (3 옵션) | admin이 Airtable staging review 시 credit term + credit limit 승인. 승인 후 #7b가 7일 또는 EOM 결제 조건 부여. |
+| **Credit - 7 days** | Legal entity / ABN/ACN / Credit limit 요청액 (3 옵션) | admin이 Airtable staging review 시 credit limit 승인. 승인 후 #7b가 7일 결제 조건 부여. _(EOM 폐기 2026-05-30 — Credit은 7일로만 통일)_ |
 | **COD** | 없음 | 환영 이메일에 회사 계좌 정보 안내. **출하 전 bank transfer 입금 증빙 필수** (#2.5로 인보이스 발행 후 결제 확인 → 출하). |
 
 > *고객이 폼에서 선택한 payment term은 admin review 단계에서 override 가능 (Airtable staging에 그대로 저장 → admin 확정).*
@@ -149,5 +149,5 @@
 - **Onboarding 승인 주체 (개정 2026-05-29)**: **admin team** (영업 X). admin이 Airtable `Onboarding Submissions` staging 보고 status=approved로 변경 = #7b 트리거.
 - **Pre-onboarding 주문**: 매직 토큰은 HubSpot 생성 시점부터 발급되므로 정식 온보딩 전 매직 링크 주문 가능. payment term 없으면 #1이 자동 오더 hold ON + Slack. 입력 정보(배송지·연락처)는 오더에만 저장 (고객 행은 admin이 Tally form 통해 채움).
 - **폼 발송·매칭 = HubSpot 이메일 템플릿 + Tally hidden field로 `hubspot_id` 박아 보냄** (2026-05-28) — 영업·고객·어드민 어느 진입 경로든 단일 패턴. n8n #7a가 ID 우선 매칭, email cross-check로 forward 가드, ID 없으면 email fallback.
-- **Payment term 옵션 (2026-05-29 결정)**: Direct Debit / Credit Application (7 Days·EOM × credit limit 3 tier) / COD 3종. COD는 출하 전 bank transfer 입금 증빙 필수. 고객 폼 선택값은 admin review에서 override 가능.
+- **Payment term 옵션 (2026-05-30 확정)**: `Direct Debit (default)` / `Credit - 7 days` (credit limit 3 tier) / `COD` 3종. _EOM·credit_term 필드 폐기 — Credit은 7일로만 통일._ COD는 출하 전 bank transfer 입금 증빙 필수. 고객 폼 선택값은 admin review에서 override 가능.
 - **GoCardless 연결 (2026-05-29 결정)**: Tally 폼 안 정적 임베드 불가 → Tally redirect on completion + 별도 redirect page에서 동적 BRT 생성 후 GoCardless flow URL로 redirect. Redirect page 구현은 별도 작업.

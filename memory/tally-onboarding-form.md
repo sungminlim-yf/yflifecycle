@@ -24,7 +24,7 @@ metadata:
 
 **섹션 2 — 지불 방법** (dropdown 3 옵션):
 - Direct Debit (default 권장) — 추가 필드 X. Tally 완료 후 redirect page에서 GoCardless flow로 동적 redirect
-- Credit Application — 분기 필드: Legal entity, ABN/ACN, Credit term (7 Days default / EOM), Credit limit 요청액 (0-3000 / 3001-10000 / over 10001)
+- Credit - 7 days — 분기 필드: Legal entity, ABN/ACN, Credit limit 요청액 (0-3000 / 3001-10000 / over 10001). _EOM·credit_term 폐기 (2026-05-30) — Credit은 7일로만 통일_
 - COD — 환영 이메일에 회사 계좌 안내. 출하 전 bank transfer 입금 증빙 필수
 
 **제거된 것**:
