@@ -1,0 +1,36 @@
+{
+  "id": "eM3uEPPqueopOH9p",
+  "name": "WF #6c: recover magic link by email (order-site)",
+  "active": true,
+  "settings": {
+    "executionOrder": "v1",
+    "saveDataErrorExecution": "all",
+    "saveDataSuccessExecution": "all",
+    "saveManualExecutions": true
+  },
+  "_note": "11 노드. 신설·가동·E2E 완료 (2026-05-30). 본체는 n8n_get_workflow id=eM3uEPPqueopOH9p로 가져올 수 있음. ClickSend(SMS #6b) 가입 전 대체로, 이메일 분실복구를 먼저 가동.",
+  "_overview": {
+    "trigger": "Webhook (POST /yf-recover-by-email-v1, header auth = order-intake-token credential dY4EiGLUEsseUd4h — #1과 동일). order-site /api/recover 프록시가 호출.",
+    "payload": "{ email }",
+    "flow": [
+      "Normalize Email: trim+lowercase, 이메일 형식 검증 → filterByFormula LOWER({이메일})=\"<email>\" (invalid이면 FALSE())",
+      "Search Customer: Airtable 고객 tbl1kAgO2ISkSS3O6 GET filterByFormula, maxRecords 1",
+      "IF Found (records.length > 0): false → Respond OK (조용히 동일 응답)",
+      "Build Recovery: 매직링크 = https://order.youngfoods.com.au/?token=<매직 토큰>, 이메일 본문(KO) 빌드, 링크 재요청 횟수+1 산출, ≥2면 qr_flag/needs_qr_alert + Slack text. 토큰·이메일 없으면 has_send=false",
+      "Update Customer: PATCH 링크 재요청 횟수 = new_count (+ ≥2면 QR 추천 플래그=true)",
+      "IF Has Send: true → Send Recovery Email; false → Respond OK",
+      "Send Recovery Email: Gmail OAuth2 (credential SycEHwXNU8mv9tYf, #7b 환영메일과 동일) → 매직링크 HTML 메일",
+      "IF Needs QR Alert (재요청 ≥2): true → Slack QR Alert(ops-orders C0B3WQ6EPQW); false → Respond OK",
+      "Respond OK: 모든 경로 수렴, 항상 {ok:true} 200 (options.responseCode)"
+    ],
+    "security": [
+      "enumeration 차단: 등록 여부·발송 여부와 무관하게 항상 {ok:true} 200, 미매칭은 조용히 종료",
+      "등록된 이메일로만 발송 (조회된 고객 행의 '이메일'로 발송)",
+      "QR: 재요청 ≥2회 → QR 추천 플래그 + Slack #ops-orders (order-site/CLAUDE.md 분실대응 규칙)"
+    ],
+    "remaining_stub": [
+      "시간창 rate limit (이메일 폭탄 방어) 미구현 — 현재 lifetime 카운터(링크 재요청 횟수)만. #6b의 SMS Log처럼 이메일 복구 로그 테이블 도입 시 시간당/일 제한 가능. enumeration·발신지 제한은 이미 적용.",
+      "메일 본문 다국어 — 현재 KO 단일. order-site는 6개 언어이나 복구 메일은 한국어 고정 (추후 수요 보고)."
+    ]
+  }
+}

@@ -29,7 +29,7 @@
 | 오더 | `tbliaikQUIRawfMU7` | #1, #2, #2.5, #3 |
 | 라인아이템 | `tblVXVQzT1q8U0HJQ` | #1, #2, #2.5 |
 | 제품 | `tblaFB9HuIuocCV9s` | #1 (가격 lookup), #2, #2.5 |
-| 고객 | `tbl1kAgO2ISkSS3O6` | #3, #5, #6b, #7b |
+| 고객 | `tbl1kAgO2ISkSS3O6` | #3, #5, #6b, #6c, #7b |
 | SMS Log | `tbljXGJsa4Wa7PCA6` | #6a, #6b |
 | Onboarding Submissions | `tblWrkl7mDixzbpTK` | #7a, #7b |
 | Production Schedule | `tblaEhgO4A20iFIge` | (운영 입력, 워크플로우 트리거 X) |
@@ -44,7 +44,7 @@
 | `HubSpot Private App (companies read)` | hubspotAppToken | `o9u31xvDKlsBJcZO` | #5, #7a, #7b |
 | `Airtable Personal Access Token account` | airtableTokenApi | `B2hRHQungck3WMoE` | 전 워크플로우 |
 | `Slack account` | slackApi | `NAh6hd7VFXGqksqK` | 예외·운영 알림 (`#ops-*`) |
-| `Gmail OAuth2 API` | gmailOAuth2 | `SycEHwXNU8mv9tYf` | #7b 환영 이메일 발송 (발신 주소 응대용 확인 필요) |
+| `Gmail OAuth2 API` | gmailOAuth2 | `SycEHwXNU8mv9tYf` | #7b 환영 이메일 + #6c 복구 링크 발송 (발신 주소 응대용 확인 필요). E2E 발송 확인 2026-05-30 |
 | `Tally account` | tallyApi | `sLfpnRidgWIwFqHe` | (예비 — #7a는 Tally → n8n webhook 수신이라 직접 불필요) |
 | `tally-webhook-secret` | _예정_ | _미생성_ | #7a HMAC 검증 (사용자가 Tally signing secret 발급 후) |
 
@@ -101,11 +101,12 @@
 - **scope**: Airtable 고객 테이블의 `고객 hold` / `hold_reason` / `outstanding` 3개 필드 변화를 HubSpot Company의 3개 property로 동기. #3가 Airtable에 commit한 직후 자연 발화.
 - **신설 필수**: HubSpot Company custom property `Hold Reason` (text) + `Outstanding (AUD)` (currency). `Account Hold`는 기존.
 
-### 6. 주문 확인·분실 복구 SMS ✅ 설계 완료 (2026-05-28)
+### 6. 주문 확인·분실 복구 (SMS #6a/#6b 설계 완료 2026-05-28 + 이메일 #6c 가동 2026-05-30)
 - 상세는 아래 "워크플로우 #6a/#6b 상세".
 - **#6a (주문 확인 sub-workflow)**: #1이 fire-and-forget 호출. 호 1건 = SMS 1건. 멱등은 `order_no` 기준.
 - **#6b (분실 복구 webhook)**: order-site 글로벌 페이지 호출. 등록된 번호로만 발송, enumeration 차단(동일 응답), rate limit(시간당 3회·일 10회/번호), 재요청 ≥2 → QR 추천 플래그.
-- **신설 필수**: Airtable `SMS Log` 테이블, ClickSend credential `clicksend-creds`(Basic auth).
+- **#6c (이메일 분실 복구 webhook) ✅ 신설·가동 (2026-05-30, id `eM3uEPPqueopOH9p`)**: ClickSend 미가입 동안 이메일 복구를 먼저 가동. order-site `/api/recover` 프록시가 호출(`/yf-recover-by-email-v1`, #1과 동일 header auth). 이메일로 고객 조회 → 등록 이메일로 매직링크 발송(Gmail OAuth2, #7b와 동일 credential) → `링크 재요청 횟수`+1, ≥2면 QR 추천 플래그 + Slack `#ops-orders`. enumeration 차단(항상 `{ok:true}`). 상세 스켈레톤 `workflow-6c-skeleton.json`. **잔여**: 시간창 rate limit(폭탄 방어)은 미구현 — 이메일 복구 로그 테이블 도입 시 추가(#6b의 SMS Log 대응물).
+- **신설 필수**: Airtable `SMS Log` 테이블, ClickSend credential `clicksend-creds`(Basic auth) — #6a/#6b 한정. #6c는 기존 Gmail credential 재사용으로 추가 신설 없음.
 
 ### 7. 온보딩 폼 제출 → HubSpot/Xero/Airtable propagate ✅ 설계 완료 (개정 2026-05-29)
 - 상세는 아래 "워크플로우 #7a/#7b 상세" 섹션.
@@ -696,7 +697,7 @@
 
 ### 관련 미결
 
-- **이메일 복구 채널**: order-site 정책엔 "전화 또는 이메일"로 조회 가능하다고 적혀있음. 현재 #6b는 SMS 전용. 이메일 복구는 별도 워크플로우(예: #6c) 또는 HubSpot single-send 활용 — 추후 설계
+- **이메일 복구 채널**: ✅ 해소 — **#6c로 구현·가동 (2026-05-30)**. order-site `/api/recover` → #6c webhook → Gmail 발송. SMS(#6b)는 ClickSend 가입 후 가동 예정. 남은 보강: 이메일 복구 시간창 rate limit(로그 테이블 필요).
 - **고객 `연락처` 다중 보관**: 현재 schema는 단일 필드. 가게 사장·총무 등 여러 번호 등록 필요 시 별도 contact 테이블화 검토 (현재는 단일로 유지)
 
 ---
@@ -965,6 +966,6 @@ Workspace는 `action-required` 카테고리에 ops-* 채널 8개 + 별도 `#ops-
 
 | 항목 | 메모 |
 | --- | --- |
-| 남은 워크플로우 후보 | **모든 핵심 #0~#7 설계·빌드 완료**, #8 (DD Redirect handler) 설계 완료·빌드 보류 (GoCardless credential 등록 후). 추가 후보: #6c(이메일 복구 — order-site 정책상 phone OR email 모두 허용) — 운영 가동 후 수요 보고 결정 |
+| 남은 워크플로우 후보 | **모든 핵심 #0~#7 + #6c(이메일 복구) 설계·빌드·가동 완료**. #8 (DD Redirect handler) 설계 완료·빌드 보류 (GoCardless credential 등록 후). |
 | 신설 운영 액션 (#2.5·#5·#6·#7 가동 전) | (#7) Airtable `Onboarding Submissions` 테이블, HubSpot Company `Customer Group` property, HubSpot workflow on `Onboarding=approved` → webhook, Tally signing secret. (#6) Airtable `SMS Log` 테이블, ClickSend 계정·sender ID(YoungFoods) 등록, n8n `clicksend-creds` credential. (#2.5) Xero Branding theme에 회사 계좌(BSB·계좌번호) invoice footer/payment instructions 등록. (#5) HubSpot Company custom property `Hold Reason`·`Outstanding (AUD)` 신설 |
 | 각 ops-* 채널 ID 등록 | 채널은 만들어졌고 매핑 확정 — 워크플로우 구현 시점에 ID를 n8n 자격증명에 입력 |
