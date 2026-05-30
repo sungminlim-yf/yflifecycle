@@ -8,3 +8,5 @@
 .env
 .env.local
 *.key
+order-site/.playwright-mcp/
+.claude/settings.local.json
