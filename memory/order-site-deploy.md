@@ -19,7 +19,24 @@ metadata:
 
 **도메인 구성 방침** (2026-05-30 결정): 서비스마다 호스팅이 달라 **서브도메인 방식** 채택 (path 방식은 단일 앱일 때만). order=Vercel, 향후 www/홈페이지=Squarespace, onboarding=Tally, customer/supplier/staff 포털=별도 서브도메인(또는 한 앱이면 app. 아래 path).
 
-**onboarding.youngfoods.com.au 가동** (2026-05-30): Tally Pro 커스텀 도메인. `onboarding` CNAME → `cname.tally.so` (Squarespace DNS), Tally 자동 SSL 🟢. 슬러그 없이 **루트에 폼 `Me75K8` 서빙** (전용 서브도메인). prefill: `…/?hubspot_id=…&email=…`. **남은 후속**: HubSpot 온보딩 이메일 템플릿 링크를 `tally.so/r/Me75K8` → `onboarding.youngfoods.com.au`로 교체(호스트만, HubSpot UI 수동). DNS는 Vercel `order`와 동일하게 Squarespace에서 관리.
+**onboarding.youngfoods.com.au 가동** (2026-05-30): Tally Pro 커스텀 도메인. `onboarding` CNAME → `cname.tally.so` (Squarespace DNS), Tally 자동 SSL 🟢. 슬러그 없이 **루트에 폼 `Me75K8` 서빙** (전용 서브도메인). DNS는 Vercel `order`와 동일하게 Squarespace에서 관리.
+
+**프리필 검증 완료 + param명 확정** (2026-05-30): 새 도메인 루트에서 URL 파라미터 정상 주입 확인. 폼 hidden field = **`hubspot_id` + `email_prefill`** (NOT `email`). 따라서 prefill URL = `https://onboarding.youngfoods.com.au/?hubspot_id={{company.hs_object_id}}&email_prefill={{contact.email}}`. ⚠️ #7a 매칭 코드가 `email` vs `email_prefill` 어느 걸 읽는지 점검 필요(기존 템플릿이 `email`만 썼다면 forward 가드 안 잡혔을 수 있음).
+
+**세션2 order-site 개선 (2026-05-30, 전부 배포·푸시 ~`8df7f89`)**:
+- 컷오프: `Australia/Brisbane` 정오 기준 + **place-order 클릭 시점** 평가(지났으면 자동 보정+안내). #1 Validate도 Sydney→Brisbane.
+- MOQ 거부 응답 422 정상화 (#1 respond 노드 `options.responseCode`로 수정).
+- 다국어 6종(EN/KO/ZH/JA/TH/ES), 제출완료 버튼+추가주문, 모바일 date fix, 할인 워딩 일반화.
+- 배너: 게스트 `[손님으로 주문]` / 매직 `[등록된 가게]` pill + 「가게명」 전용 페이지 + "내 가게 아닌가요? 손님으로 주문→"(작게). "영업 연락" 문구 제거.
+- 접근성 줌: 🔍+작은A/↺/큰A, 배율 0.9~1.6, localStorage 저장.
+- 분실복구 "Lost your link?" collapse(기본 접힘) + (tap to open) + "이메일도 기억 안나면 게스트로" 안내.
+- **연락처·담당자 인라인 self-update (#R2 `eKAS9xqfHzvwliZj` active)**: magic 카드 '수정' → 담당자/연락처만 PATCH, 오더 무관. /api/update-contact 프록시. E2E 검증.
+- **#6c 이메일 분실복구 (`eM3uEPPqueopOH9p` active)**: /api/recover → Gmail 발송.
+
+**🔴 다음 세션 픽업 (미완)**:
+1. **HubSpot 온보딩 이메일 템플릿 URL 교체** — `tally.so/r/Me75K8?...` → `https://onboarding.youngfoods.com.au/?hubspot_id={{ company.hs_object_id }}&email_prefill={{ contact.email }}`. 사용자가 HubSpot 링크칸에 직접 타이핑 시 "invalid characters {{ }}" 에러 만남 → 해결책: 리치텍스트 **소스코드 `</>`** 에디터에서 `<a href="...">` 직접 작성(중괄호 안 공백, 필요시 `&`→`&amp;`), 또는 링크 대화상자의 토큰 삽입 아이콘 사용. **이게 자러 가기 직전 멈춘 지점.**
+2. 교체 후 실제 온보딩 1건 E2E(#7a staging에 hubspot_id 잡히는지).
+3. #7a hidden field param명(email vs email_prefill) 정합성 점검.
 
 #7b 환영메일 매직링크 base URL = `https://order.youngfoods.com.au` 로 확정 (CLAUDE.md·README와 일치). [[yf-design-progress]]
 
