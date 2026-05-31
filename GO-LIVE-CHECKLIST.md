@@ -7,21 +7,25 @@
 
 ---
 
-## 현재 상태 스냅샷 (2026-05-30)
+## 현재 상태 스냅샷 (2026-05-31 — n8n 실측 갱신: 시스템 WF 13개 전부 active)
 
 | 워크플로우 | id | 노드 | 상태 | 트리거 |
 | --- | --- | --- | --- | --- |
-| #0 HubSpot Company → Airtable + 토큰 | `lNABcJuKPABoqQf0` | 6 | ✅ **active** (5min cron) | Schedule polling |
-| #1 주문 제출 → Airtable | `twZw1wv3Fc1iJdeO` | 25 | ⬜ inactive | webhook `yf-order-intake-v1` (header auth) |
-| #2 dispatch → Xero (DD/7-day) | `W1qYHJKHtPzKpbm4` | 14 | ⬜ inactive | webhook `dispatch-invoice-v1` (Airtable Automation) |
-| #2.5 Prepay/COD → Xero | `GuMEWpGQ4506RmHf` | 14 | ⬜ inactive | webhook `prepay-cod-invoice-v1` (Airtable Automation) |
-| #3 Xero → Airtable 결제·Hold | `YqkAw7AJKw5uPBpv` | 18 | ⬜ inactive | webhook `xero-invoice-update-v1` (Xero) |
-| #3-poll 폴링 폴백 | `atQNwPt7B3QUBLBi` | 5 | ⬜ inactive | Schedule `5 * * * *` |
-| #5 고객 → HubSpot 재무 공유 | `EM3FKoINCG3ytoNV` | 11 | ⬜ inactive | webhook `customer-finance-sync-v1` (Airtable Automation) |
-| #7a Tally → Airtable staging | `ylRJHUCFQ9RmCa6R` | 25 | ⬜ inactive | webhook `tally-onboarding-intake-v1` (Tally) |
-| #7b 승인 → Xero/Airtable propagate | `pvvhhs5expWOfJce` | 26 | ⬜ inactive | webhook `tally-approved-propagate-v1` (Airtable Automation) |
+| #0 HubSpot Company → Airtable + 토큰 | `lNABcJuKPABoqQf0` | 6 | ✅ **active** (5min cron 가동 확인) | Schedule polling |
+| #1 주문 제출 → Airtable | `twZw1wv3Fc1iJdeO` | 25 | ✅ **active** | webhook `yf-order-intake-v1` (header auth) |
+| #2 dispatch → Xero (DD/7-day) | `W1qYHJKHtPzKpbm4` | 14 | ✅ **active** | webhook `dispatch-invoice-v1` (Airtable Automation) |
+| #2.5 Prepay/COD → Xero | `GuMEWpGQ4506RmHf` | 14 | ✅ **active** | webhook `prepay-cod-invoice-v1` (Airtable Automation) |
+| #3 Xero → Airtable 결제·Hold | `YqkAw7AJKw5uPBpv` | 18 | ✅ **active** | webhook `xero-invoice-update-v1` (Xero) |
+| #3-poll 폴링 폴백 | `atQNwPt7B3QUBLBi` | 5 | ✅ **active** (매시 :05 가동 확인) | Schedule `5 * * * *` |
+| #5 고객 → HubSpot 재무 공유 | `EM3FKoINCG3ytoNV` | 11 | ✅ **active** | webhook `customer-finance-sync-v1` (Airtable Automation) |
+| #7a Tally → Airtable staging | `ylRJHUCFQ9RmCa6R` | 25 | ✅ **active** | webhook `tally-onboarding-intake-v1` (Tally) |
+| #7b 승인 → Xero/Airtable propagate | `pvvhhs5expWOfJce` | 26 | ✅ **active** | webhook `tally-approved-propagate-v1` (Airtable Automation) |
+| #8 HubSpot → Airtable 상태 sync | `WCf5ZNO0cP8PoV8v` | 5 | ✅ **active** (10min cron 가동 확인) | Schedule polling |
+| #R resolve / #R2 update / #6c recover | `hSed…`/`eKAS…`/`eM3u…` | 5/10/11 | ✅ **active** | webhook (order-site) |
 | #6a/#6b SMS | — | — | ⏳ **미빌드** | ClickSend 알파태그 승인 후 |
-| #8 DD redirect handler | — | — | ⏳ **미빌드** | GoCardless credential 후 |
+| #8b DD redirect handler | — | — | ⏳ **미빌드** | GoCardless credential 후 |
+
+> ✅ **Phase 3 (워크플로우 Activate) = 사실상 완료.** 스케줄 기반(#0·#8·#3-poll)은 실행 이력으로 가동 확인. 이벤트 기반(#2·#2.5·#5·#7a·#7b·#1·#3)은 active 상태이나 **외부 트리거 배선(Phase 1·2)이 걸려야 자동 실행**됨.
 
 - n8n 인스턴스: `https://youngfoods.app.n8n.cloud` → webhook 전체 URL = `https://youngfoods.app.n8n.cloud/webhook/<path>`
 - 무관한 기존 워크플로우(`_test_xero_credential`, `Platter Order Intake` 등 active)는 이 시스템과 별개 — 나중에 정리.

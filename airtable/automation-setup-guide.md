@@ -85,7 +85,7 @@
 **Trigger**: When record matches conditions
 - Table: `Onboarding Submissions` (`tblWrkl7mDixzbpTK`)
 - Conditions:
-  - `status` = `approved`
+  - `form status` = `approved`  _(2026-05-31: `status` 필드 → `form status`로 rename됨)_
 
 **Body**:
 ```json
@@ -98,7 +98,33 @@
 
 **Webhook URL**: `https://youngfoods.app.n8n.cloud/webhook/tally-approved-propagate-v1`
 
-**테스트**: 기존 staging row의 status를 `under review` → `approved`로 바꾸기. #7b가 Xero Contact 생성·Airtable 고객 update·hold 오더 release·HubSpot Onboarding=approved sync·Soft match 검색까지 다 실행. **운영 시작 전 테스트 데이터 사용 권장**.
+**테스트**: 기존 staging row의 `form status`를 `form submitted` → `approved`로 바꾸기. #7b가 Xero Contact 생성·Airtable 고객 update·hold 오더 release·HubSpot Onboarding=approved sync·Soft match 검색까지 다 실행. **운영 시작 전 테스트 데이터 사용 권장**.
+
+---
+
+## Automation 6 — #7c form status → HubSpot onboarding 동기 (2026-05-31 신설)
+
+**워크플로우**: `WF #7c` (id `HyAA29msWiAHIxkz`, active)
+
+**역할**: 고객 table `Onboarding Status`를 사람이 직접 안 건드리고 HubSpot에서만 흐르게 하는 모델(v3)의 핵심. admin이 Airtable Submissions `form status`를 바꾸면 → HubSpot `onboarding` PATCH → #8(폴링)이 고객 table로 미러. 특히 `pending information` 경로를 메움 (`form submitted`=#7a 자동, `approved`=#7b가 별도 처리하지만 #7c가 HubSpot 동기를 일원화/재확인).
+
+**Trigger**: When record updated
+- Table: `Onboarding Submissions` (`tblWrkl7mDixzbpTK`)
+- Watch fields: `form status` (이 필드만)
+
+**Action**: Send webhook
+- URL: `https://youngfoods.app.n8n.cloud/webhook/onboarding-formstatus-sync-v1`
+- Method `POST`, Header `Content-Type: application/json`
+- Body:
+  ```json
+  { "submission_id": "{{ trigger.submission_id }}" }
+  ```
+
+**응답**: `{status:"synced", onboarding:"<form status값>"}` (company id 있고 valid값일 때) / `{status:"skipped", skip_reason:...}` (게스트·미지원 값).
+
+**테스트**: staging row의 `form status`를 `pending information`으로 변경 → HubSpot Company `onboarding=pending information` 반영 확인 → 10분 내 #8이 고객 table `Onboarding Status` 미러.
+
+> ⚠️ `approved`로 바꾸면 이 #7c와 #4(#7b)가 **둘 다** 발화 (#7c=HubSpot onboarding 동기 / #7b=전체 propagate). 둘 다 멱등이라 충돌 없음.
 
 ---
 
