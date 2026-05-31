@@ -115,6 +115,20 @@
 - **신설 필수**: Airtable `Onboarding Submissions` 테이블 + HubSpot Company custom property `Customer Group` (single select: 내부고객/일반고객) + **HubSpot Company `magic_token` property** (#0이 채움)
 - **운영 액션 변경**: HubSpot Workflow `Onboarding=approved → webhook` 불필요해짐 (트리거 위치 변경됨). 대신 **Airtable 자동화 `Onboarding Submissions.status=approved` → n8n #7b webhook** 신설
 
+### 8. 고객정보 동기화 모델 (SoT 분담) + #10·#11 ✅ 확정·빌드 (2026-05-31)
+
+**SoT 분담**:
+| 데이터 | SoT | 흐름 |
+| --- | --- | --- |
+| Sales Pipeline / Sample / Onboarding Status | **HubSpot** (영업이 HubSpot에서만 편집) | #8 polling이 Airtable 고객 행으로 미러 (read-only) |
+| **main contact** (담당자·연락처·이메일) | **Airtable** (고객이 order-site #R2로 셀프 수정) | HubSpot으로 강제 push 안 함. HubSpot primary contact와 불일치 시 **#10이 #ops-mismatch 알림** (owner @-mention) |
+| **account contact** (회계 담당자·이메일·연락처) | **Airtable** (admin) | **#11이 Xero Contact로 push** (인보이스 이메일 정확성 유지) |
+| 재무 (hold·outstanding) | **Airtable** (#3가 산출) | #5가 HubSpot Company로 push |
+
+- **#10 (main contact mismatch alert, id `fWVioW3ib89TOens`, active)**: webhook `contact-mismatch-check-v1`. body `{hubspot_company_id, record_id?}`. Airtable 고객 행(담당자·연락처·이메일) vs HubSpot **primary company contact**(firstname+lastname·phone·email) 비교 → 불일치 시 `#ops-mismatch`(`C0B76NKUC3Y`)에 HubSpot Company **owner @-mention**(owner email→Slack `users.lookupByEmail`) + `Airtable: X / HubSpot: Y` diff 게시. 양쪽 값이 **모두 존재하고 다를 때만** 플래그(빈 값 false positive 방지, 전화는 숫자만 비교, 이메일 소문자 비교). **fire-and-forget 호출**: #R2(셀프 수정 후 Patch Customer) + #7b(온보딩 승인 후 Respond Success). 멱등/알림 채널 = #ops-mismatch.
+- **#11 (account contact → Xero Contact sync, id `E0qUVBH6MilEbJ6d`, active)**: webhook `account-contact-xero-sync-v1`. body `{record_id}`. Airtable 고객 회계 담당자 First/Last Name·회계 이메일 → Xero Contact(ContactID 있을 때만) POST `/Contacts {ContactID, FirstName, LastName, EmailAddress}`. 트리거 = **Airtable 자동화** (고객 테이블 회계 First/Last Name·회계 이메일 변경 → webhook).
+- **신설 운영 액션**: ① Slack `#ops-mismatch` 채널(생성 완료) + n8n Slack account가 멤버인지 확인(현 credential은 user account token → 영업/admin이 채널 멤버면 게시 가능). ② HubSpot Private App에 `crm.objects.contacts.read` + `crm.objects.owners.read` scope 추가(#10이 primary contact·owner 조회). ③ Slack credential에 `users:read.email` scope(#10 owner @-mention). ④ Airtable 자동화 `고객.회계 First/Last Name·회계 이메일 변경 → #11 webhook`.
+
 ---
 
 ---
@@ -874,6 +888,7 @@ Workspace는 `action-required` 카테고리에 ops-* 채널 8개 + 별도 `#ops-
 | `#ops-production` | 생산 라인 지연, 생산 계획 vs 실적 갭 |
 | `#ops-qa` | 내부 QA 이슈 (라벨·바코드·중량 불일치 등) |
 | `#ops-complaints` | 고객 클레임 (품질·이물질·배송 손상 등) |
+| `#ops-mismatch` (`C0B76NKUC3Y`) | **main contact (담당자·연락처·이메일) Airtable↔HubSpot primary contact 불일치** (#10). 담당 영업(HubSpot owner) @-mention. admin·영업 공유 채널 |
 
 > 채널 ID는 n8n 자격증명/`channel-map` Airtable 테이블에 보관 권장(코드 하드코딩 X). 채널 변경에 대응 쉬워짐.
 

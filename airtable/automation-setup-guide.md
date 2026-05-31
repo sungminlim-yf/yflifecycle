@@ -143,6 +143,36 @@ console.log(res.status, await res.text());
 
 ---
 
+## Automation 7 — #11 account contact → Xero Contact sync (2026-05-31 신설)
+
+**워크플로우**: `WF #11` (id `E0qUVBH6MilEbJ6d`, active)
+
+**역할**: 고객 table의 **회계 담당자 정보**(회계 담당자 First/Last Name·회계 이메일)가 바뀌면 → Xero Contact의 FirstName/LastName/EmailAddress를 갱신. 인보이스가 항상 올바른 회계 이메일로 가도록 유지. (account contact SoT = Airtable, Xero는 따라옴)
+
+**Trigger**: When record updated
+- Table: `고객` (`tbl1kAgO2ISkSS3O6`)
+- Watch fields: `회계 담당자 First Name`, `회계 담당자 Last Name`, `회계 이메일` (셋 중 하나 변경 시 발화)
+
+**Action**: Send webhook (또는 옵션 B Run a script)
+- URL: `https://youngfoods.app.n8n.cloud/webhook/account-contact-xero-sync-v1`
+- Method `POST`, Header `Content-Type: application/json`
+- Body: `{ "record_id": "{{ trigger.Airtable record ID }}" }`
+
+**응답**: `{status:"synced"}` (Xero ContactID 있을 때) / `{status:"aborted", skip_reason:"no_xero_contact"}` (아직 Xero Contact 없음 = 온보딩 미완 고객, skip 정상).
+
+**테스트**: 온보딩 완료된(Xero ContactID 보유) 고객 1건의 `회계 이메일`을 임시 변경 → Test → Xero Contact 이메일 반영 확인 → 원복.
+
+---
+
+## #10 (main contact mismatch alert) — Airtable Automation 불필요
+
+#10(`fWVioW3ib89TOens`)은 **#R2(셀프 수정)·#7b(온보딩 승인)가 fire-and-forget로 직접 호출**한다. Airtable Automation 설정 없음. 단, 가동 전 사용자 손작업 3건:
+1. HubSpot Private App에 scope 추가: `crm.objects.contacts.read` + `crm.objects.owners.read` (primary contact·owner 조회용).
+2. Slack credential에 `users:read.email` scope (owner email→Slack ID @-mention용). 없으면 @-mention 대신 이름만 표기(degraded, 알림은 정상).
+3. n8n Slack account가 `#ops-mismatch`(`C0B76NKUC3Y`) 채널 멤버인지 확인 (user account token이면 그 사용자가 채널 멤버면 OK).
+
+---
+
 ## (옵션) Automation 5 — #3 polling fallback 대체
 
 #3 메인 트리거 = Xero webhook (INVOICE.UPDATE). Polling fallback은 별도 워크플로우 또는 Schedule trigger로 구현. Airtable Automation 불필요.
