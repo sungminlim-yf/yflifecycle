@@ -26,7 +26,7 @@ const STRINGS = {
     resolving: 'Loading your shop info…',
     invalidLink: '⚠️ This link is invalid or expired. Please request a new one.',
     confirmShop: 'Please confirm your details',
-    fShop: 'Shop', fContact: 'Contact', fPhone: 'Phone', fAddress: 'Delivery address', fPayment: 'Payment term', fLang: 'Email language',
+    fShop: 'Shop', fContact: 'Contact', fPhone: 'Phone', fAddress: 'Delivery address', fPayment: 'Payment term', fLang: 'Email language', creditLimit: 'Credit limit',
     editBtn: 'Edit', saveBtn: 'Save', cancelBtn: 'Cancel', savedMsg: 'Saved ✓', saveErr: 'Could not save',
     editHint: 'Contact or phone changed? Edit here — your orders are unaffected.',
     guestInfo: 'Shop details',
@@ -69,7 +69,7 @@ const STRINGS = {
     resolving: '가게 정보를 불러오는 중…',
     invalidLink: '⚠️ 유효하지 않거나 만료된 링크입니다. 재발급을 요청해 주세요.',
     confirmShop: '아래 정보를 확인해 주세요',
-    fShop: '상호', fContact: '담당자', fPhone: '연락처', fAddress: '배송지', fPayment: '결제 조건', fLang: '이메일 언어',
+    fShop: '상호', fContact: '담당자', fPhone: '연락처', fAddress: '배송지', fPayment: '결제 조건', fLang: '이메일 언어', creditLimit: '신용 한도',
     editBtn: '수정', saveBtn: '저장', cancelBtn: '취소', savedMsg: '저장되었습니다 ✓', saveErr: '저장 실패',
     editHint: '연락처·담당자가 바뀌었나요? 여기서 수정하세요 — 주문에는 영향 없습니다.',
     guestInfo: '가게 정보',
@@ -112,7 +112,7 @@ const STRINGS = {
     resolving: '正在加载店铺信息…',
     invalidLink: '⚠️ 此链接无效或已过期。请重新申请。',
     confirmShop: '请确认以下信息',
-    fShop: '店铺', fContact: '联系人', fPhone: '电话', fAddress: '配送地址', fPayment: '付款方式', fLang: '邮件语言',
+    fShop: '店铺', fContact: '联系人', fPhone: '电话', fAddress: '配送地址', fPayment: '付款方式', fLang: '邮件语言', creditLimit: '信用额度',
     editBtn: '修改', saveBtn: '保存', cancelBtn: '取消', savedMsg: '已保存 ✓', saveErr: '保存失败',
     editHint: '联系人或电话有变动？在此修改 — 不影响您的订单。',
     guestInfo: '店铺信息',
@@ -155,7 +155,7 @@ const STRINGS = {
     resolving: '店舗情報を読み込み中…',
     invalidLink: '⚠️ このリンクは無効か期限切れです。再発行をご依頼ください。',
     confirmShop: '内容をご確認ください',
-    fShop: '店舗', fContact: '担当者', fPhone: '電話', fAddress: '配送先', fPayment: 'お支払い条件', fLang: 'メール言語',
+    fShop: '店舗', fContact: '担当者', fPhone: '電話', fAddress: '配送先', fPayment: 'お支払い条件', fLang: 'メール言語', creditLimit: '与信限度額',
     editBtn: '編集', saveBtn: '保存', cancelBtn: 'キャンセル', savedMsg: '保存しました ✓', saveErr: '保存できませんでした',
     editHint: '担当者や電話番号が変わりましたか？こちらで編集 — 注文には影響しません。',
     guestInfo: '店舗情報',
@@ -198,7 +198,7 @@ const STRINGS = {
     resolving: 'กำลังโหลดข้อมูลร้าน…',
     invalidLink: '⚠️ ลิงก์นี้ไม่ถูกต้องหรือหมดอายุ กรุณาขอลิงก์ใหม่',
     confirmShop: 'กรุณาตรวจสอบข้อมูลด้านล่าง',
-    fShop: 'ร้าน', fContact: 'ผู้ติดต่อ', fPhone: 'โทรศัพท์', fAddress: 'ที่อยู่จัดส่ง', fPayment: 'เงื่อนไขการชำระเงิน', fLang: 'ภาษาอีเมล',
+    fShop: 'ร้าน', fContact: 'ผู้ติดต่อ', fPhone: 'โทรศัพท์', fAddress: 'ที่อยู่จัดส่ง', fPayment: 'เงื่อนไขการชำระเงิน', fLang: 'ภาษาอีเมล', creditLimit: 'วงเงินเครดิต',
     editBtn: 'แก้ไข', saveBtn: 'บันทึก', cancelBtn: 'ยกเลิก', savedMsg: 'บันทึกแล้ว ✓', saveErr: 'บันทึกไม่สำเร็จ',
     editHint: 'ผู้ติดต่อหรือเบอร์โทรเปลี่ยน? แก้ไขที่นี่ — ไม่กระทบคำสั่งซื้อ',
     guestInfo: 'ข้อมูลร้าน',
@@ -241,7 +241,7 @@ const STRINGS = {
     resolving: 'Cargando la información de tu tienda…',
     invalidLink: '⚠️ Este enlace no es válido o ha caducado. Solicita uno nuevo.',
     confirmShop: 'Confirma tus datos',
-    fShop: 'Tienda', fContact: 'Contacto', fPhone: 'Teléfono', fAddress: 'Dirección de entrega', fPayment: 'Condiciones de pago', fLang: 'Idioma del correo',
+    fShop: 'Tienda', fContact: 'Contacto', fPhone: 'Teléfono', fAddress: 'Dirección de entrega', fPayment: 'Condiciones de pago', fLang: 'Idioma del correo', creditLimit: 'Límite de crédito',
     editBtn: 'Editar', saveBtn: 'Guardar', cancelBtn: 'Cancelar', savedMsg: 'Guardado ✓', saveErr: 'No se pudo guardar',
     editHint: '¿Cambió el contacto o teléfono? Edítalo aquí — no afecta tus pedidos.',
     guestInfo: 'Datos de la tienda',
@@ -568,10 +568,15 @@ export default function Page() {
                   {shop.contact ? <div className="shoprow"><span className="muted">{t.fContact}</span><span>{shop.contact}</span></div> : null}
                   {shop.phone ? <div className="shoprow"><span className="muted">{t.fPhone}</span><span>{shop.phone}</span></div> : null}
                   {shop.address ? <div className="shoprow"><span className="muted">{t.fAddress}</span><span>{shop.address}</span></div> : null}
-                  {shop.payment_term ? <div className="shoprow"><span className="muted">{t.fPayment}</span><span>{shop.payment_term}{shop.credit_limit ? ` / $${Number(shop.credit_limit).toLocaleString()} limit` : ''}</span></div> : null}
+                  {shop.payment_term ? <div className="shoprow"><span className="muted">{t.fPayment}</span><span>{shop.payment_term}{shop.credit_limit ? ` · ${t.creditLimit}: $${Number(shop.credit_limit).toLocaleString()}` : ''}</span></div> : null}
                   {shop.preferred_language ? <div className="shoprow"><span className="muted">{t.fLang}</span><span>{(STRINGS[shop.preferred_language] || {}).langName || shop.preferred_language}</span></div> : null}
                   {contactMsg === 'saved' && <div className="muted" style={{ color: '#1f9d55', marginTop: 8 }}>{t.savedMsg}</div>}
-                  <div className="edit-hint"><span>{t.editHint}</span> <button className="linkbtn" onClick={startEdit}>{t.editBtn}</button></div>
+                  <div className="collapse" style={{ marginTop: 12 }}>
+                    <button type="button" className="collapse-head" aria-expanded={editing} onClick={startEdit}>
+                      <span>{t.editHint}</span>
+                      <span className="chev">{editing ? '▾' : '▸'}</span>
+                    </button>
+                  </div>
                 </>
               )}
               {contactMsg === 'err' && <div className="warn">{t.saveErr}</div>}
