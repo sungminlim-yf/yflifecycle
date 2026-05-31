@@ -11,6 +11,7 @@
 3. **+ Create automation** → 이름 입력 (아래 각 섹션 참조)
 4. **Trigger** 설정 (아래 각 섹션 참조)
 5. **+ Add action** → **Send webhook** 선택
+   - ⚠️ Airtable AI/auto-builder가 트리거만 만들고 "Send webhook 액션은 자동 생성 불가"라고 하면 → 액션은 **직접 추가**해야 함. Send webhook 액션이 플랜에 없으면 **옵션 B(Run a script)** 사용.
 6. URL 입력 (아래 각 섹션 참조)
 7. Method = `POST`, Headers = `Content-Type: application/json`
 8. Body 입력 (모든 Automation 동일 형식):
@@ -20,6 +21,20 @@
    }
    ```
    - `trigger.Airtable record ID`는 Airtable Automation의 dynamic token. UI에서 `+ Insert dynamic value` → trigger record → ID 선택.
+
+### 옵션 B — Run a script (Send webhook 액션이 없을 때, 모든 플랜 가능)
+
+**+ Add action → Run a script** → 우측 **Input variables**에 필요한 필드 추가(예: `submission_id` 또는 `record_id` = trigger record의 해당 필드) → 스크립트:
+```js
+let cfg = input.config();
+const res = await fetch("https://youngfoods.app.n8n.cloud/webhook/<path>", {
+  method: "POST",
+  headers: { "Content-Type": "application/json" },
+  body: JSON.stringify(cfg),   // cfg = { submission_id } 또는 { record_id }
+});
+console.log(res.status, await res.text());
+```
+`<path>`는 각 섹션의 webhook path. Test 시 200 + n8n 응답 JSON 확인.
 9. **Test action** → n8n webhook 응답 확인 → 200이면 OK
 10. **Turn on automation** 토글 ON
 
