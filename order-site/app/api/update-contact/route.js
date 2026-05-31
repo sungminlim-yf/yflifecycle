@@ -13,13 +13,14 @@ export async function POST(req) {
   const token = (body && body.token ? String(body.token) : '').trim();
   const contact = (body && body.contact ? String(body.contact) : '').trim();
   const phone = (body && body.phone ? String(body.phone) : '').trim();
+  const language = (body && body.language ? String(body.language) : '').trim();
 
   const base = process.env.N8N_BASE_URL;
   const path = process.env.N8N_UPDATE_CONTACT_PATH || 'yf-update-contact-v1';
   const headerName = process.env.N8N_ORDER_INTAKE_HEADER_NAME;
   const headerValue = process.env.N8N_ORDER_INTAKE_HEADER_VALUE;
 
-  if (!token || (!contact && !phone)) {
+  if (!token || (!contact && !phone && !language)) {
     return Response.json({ ok: false, error_code: 'nothing_to_update' }, { status: 200 });
   }
   if (!base || !headerName || !headerValue) {
@@ -31,7 +32,7 @@ export async function POST(req) {
     const r = await fetch(url, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json', [headerName]: headerValue },
-      body: JSON.stringify({ token, contact, phone }),
+      body: JSON.stringify({ token, contact, phone, language }),
     });
     const text = await r.text();
     let data;

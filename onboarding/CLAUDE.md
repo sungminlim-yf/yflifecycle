@@ -97,6 +97,7 @@
 - 배송지 (delivery address)
 - 담당자 이름 (manager/owner name)
 - 담당자 이메일·전화
+- **선호 언어 (Preferred language for our emails)** — dropdown 6종(English/한국어/中文/日本語/ไทย/Español). #7a가 라벨→코드(en/ko/zh/ja/th/es) 매핑 → staging `preferred_language` → #7b가 고객행 `선호 언어` 저장. 이메일은 영어 본문 + (선호≠en) 모국어 블록 이중 언어 발송. 주문사이트 수정 패널에서도 변경 가능. _2026-05-31 추가._
 - 회계팀 정보: "같음 / 다름" 분기 dropdown → "다름" 선택 시 회계팀 이름·이메일·전화 필드 표시
 - **Hidden field** (URL prefill, 폼 UI 숨김):
   - `hubspot_id` — HubSpot Company ID. HubSpot 이메일 템플릿 personalization token으로 prefill.
