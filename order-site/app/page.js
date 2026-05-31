@@ -568,7 +568,7 @@ export default function Page() {
                   {shop.contact ? <div className="shoprow"><span className="muted">{t.fContact}</span><span>{shop.contact}</span></div> : null}
                   {shop.phone ? <div className="shoprow"><span className="muted">{t.fPhone}</span><span>{shop.phone}</span></div> : null}
                   {shop.address ? <div className="shoprow"><span className="muted">{t.fAddress}</span><span>{shop.address}</span></div> : null}
-                  {shop.payment_term ? <div className="shoprow"><span className="muted">{t.fPayment}</span><span>{shop.payment_term}</span></div> : null}
+                  {shop.payment_term ? <div className="shoprow"><span className="muted">{t.fPayment}</span><span>{shop.payment_term}{shop.credit_limit ? ` / $${Number(shop.credit_limit).toLocaleString()} limit` : ''}</span></div> : null}
                   {shop.preferred_language ? <div className="shoprow"><span className="muted">{t.fLang}</span><span>{(STRINGS[shop.preferred_language] || {}).langName || shop.preferred_language}</span></div> : null}
                   {contactMsg === 'saved' && <div className="muted" style={{ color: '#1f9d55', marginTop: 8 }}>{t.savedMsg}</div>}
                   <div className="edit-hint"><span>{t.editHint}</span> <button className="linkbtn" onClick={startEdit}>{t.editBtn}</button></div>
