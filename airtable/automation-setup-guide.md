@@ -45,13 +45,13 @@ console.log(res.status, await res.text());
 **Trigger**: When record matches conditions
 - Table: `오더` (`tbliaikQUIRawfMU7`)
 - Conditions (모두 AND):
-  - `출하 상태` = `출하완료`
-  - `Payment term` is any of [`GoCardless DD`, `7-day credit`]
+  - `오더 상태` = `출하완료`  _(2026-05-31: `출하 상태`→`오더 상태` 리네임)_
+  - `Payment term` is any of [`Direct Debit (default)`, `Credit - 7 days`]  _(2026-05-30: payment term 3종 확정. 옛 `GoCardless DD`/`7-day credit` 폐기)_
   - `Xero 인보이스 ID` is empty (멱등 — 이미 발행된 오더 재처리 방지)
 
 **Webhook URL**: `https://youngfoods.app.n8n.cloud/webhook/dispatch-invoice-v1`
 
-**테스트**: 출하 상태가 `출하완료`인 DD/7-day 주문 1건 골라 Xero 인보이스 ID 비우고 Test action.
+**테스트**: 오더 상태가 `출하완료`인 DD/Credit-7days 주문 1건 골라 Xero 인보이스 ID 비우고 Test action. (#2 Safety Checks가 `오더 상태='출하완료'` + payment ∈ {Direct Debit (default), Credit - 7 days} 재확인 — 트리거와 정합)
 
 ---
 
@@ -59,18 +59,16 @@ console.log(res.status, await res.text());
 
 **워크플로우**: `WF #2.5` (id `GuMEWpGQ4506RmHf`)
 
-**Trigger**: When record created
+**Trigger**: When record matches conditions (권장 — created보다 견고, COD로 편집된 기존 오더도 포착)
 - Table: `오더` (`tbliaikQUIRawfMU7`)
-- Conditions (모두 AND, **created** trigger 후 filter):
-  - `출하 상태` is any of [`접수`, `Hold`]
-  - `Payment term` is any of [`Prepay`, `COD`]
-  - `Xero 인보이스 ID` is empty
+- Conditions (모두 AND):
+  - `오더 상태` = `접수`  _(2026-05-31: `출하 상태`→`오더 상태` 리네임 + `Hold` 옵션 폐기. COD 오더는 #1이 생성 시 `오더 상태=접수` + `오더 Hold=true`로 만듦)_
+  - `Payment term` = `COD`  _(2026-05-30: Prepay 폐기, COD only. #2.5 Safety Checks `validPayment=['COD']`와 정합)_
+  - `Xero 인보이스 ID` is empty (멱등)
 
 **Webhook URL**: `https://youngfoods.app.n8n.cloud/webhook/prepay-cod-invoice-v1`
 
-**대안 Trigger** (record updated): Created가 너무 좁으면 "When record matches conditions" 사용 — 위 conditions에 부합하는 즉시 발화. 멱등은 `Xero 인보이스 ID is empty` 조건이 보장.
-
-**테스트**: Prepay 또는 COD 주문 1건 새로 만들기 (또는 기존 주문의 인보이스 ID 비우기).
+**테스트**: COD 주문 1건 새로 만들기 (또는 기존 COD 주문의 인보이스 ID 비우기). #2.5가 인보이스 발행 + `오더 Hold=true` + `결제 상태=미결제` set → 입금 확인 시 #3가 hold 해제.
 
 ---
 
