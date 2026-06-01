@@ -14,3 +14,4 @@
 - [대화 진행 스타일](yf-conversation-style.md) — 미결 1~2개씩 점진 진행, default 권장 잘 채택, 큰 묶음마다 명시 commit 요청
 - [주문사이트 배포](order-site-deploy.md) — Next.js→Vercel 라이브. `order.youngfoods.com.au`(A 76.76.21.21). 재배포=`vercel deploy --prod`. 서브도메인 방침
 - [Airtable lookup NOT() 함정](airtable-lookup-not-gotcha.md) — 체크박스 lookup엔 `NOT()` 금지(꺼져도 `[null]` 배열=truthy 오판) → `!=1` 비교 사용. `출하 가능` formula에서 발견
+- [Tally 온보딩 폼](tally-onboarding-form.md) — 운영 폼 `Me75K8`(workspace w4Pyvr) + v2 명세(2섹션·COD·GoCardless 동적 redirect)·#7a 매핑 정책
