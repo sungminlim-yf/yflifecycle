@@ -9,6 +9,8 @@ metadata:
 
 YF 운영 시스템의 장기 아키텍처 방향 (2026-06-01 결정). 상세 근거는 repo `ARCHITECTURE.md`.
 
+**근본 의도 (핵심)**: **Airtable은 목적지가 아니라 중간 단계.** 사업 초기에 빠르게 운영을 시작해 **프로세스를 실제 검증·정련하는 수단**으로 Airtable 사용 → 충분히 최적화된 프로세스를 **최종적으로 Supabase 기반 자체 시스템으로 이전**하는 것이 목적지. Airtable 정련 = 버려지는 게 아니라 Supabase ERP의 검증된 스펙. 비전공자가 Claude Code로 직접 구축하는 게 이상적 그림.
+
 **3단계 로드맵**:
 - **1단계 (현재)**: HubSpot(CRM) + Web(order intake) + **Airtable**(고객·오더·라인아이템·생산계획·재고예측·dispatch) + Xero(회계) + n8n(워크플로우). Airtable의 가치 = **공짜로 딸려오는 운영 UI**(그리드·인터페이스·Page Designer). 비전공자가 Claude Code로 빠르게 구축·검증.
 - **2단계 (다음, 강력 추천)**: Airtable → **Supabase + Next.js 자체 ERP**로 교체. **Next.js + Supabase + Vercel = Claude Code 자체 구축에 가장 잘 맞는 스택**. Airtable 테이블이 SQL 테이블로 거의 1:1 이식. HubSpot·Xero·n8n은 유지.
