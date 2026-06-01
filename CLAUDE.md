@@ -120,6 +120,8 @@
 ## 다음 대화에서 이어갈 내용
 
 > **가동 단계 진입** — 핵심 설계·빌드 완료. 사용자 UI 작업(B트랙)은 **`GO-LIVE-CHECKLIST.md`**에 Phase 0~5 순서로 정리됨 (Airtable Automation → 외부 webhook → 워크플로우 Activate → 주문사이트 연결).
+>
+> **아키텍처 방향 (2026-06-01 확정, 상세 `ARCHITECTURE.md`)**: 1단계 Airtable로 **출시 가능 상태까지 완성·운영**(폴백 보장) → 남는 시간에 2단계 **Supabase+Next.js 자체 ERP**(Claude Code) 병렬 착수 → go-live 시점 게이트(준비되면 Supabase 바로, 아니면 Airtable로 출시 후 점진 이전). CRM(HubSpot)·회계(Xero)는 자체제작 안 함, 영구 유지. **Airtable 정련 = Supabase 스펙 작성**이므로 헛수고 아님. **정련 백로그 = `GO-LIVE-CHECKLIST.md` Phase 6.**
 
 1. **`GO-LIVE-CHECKLIST.md` 따라 가동** (사용자 UI 작업)
 2. 워크플로우 manual test (#5 → #7a → #7b → #2.5 → #2 → #3 → #1 순 1건씩)

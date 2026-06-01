@@ -1,7 +1,7 @@
 # Young Foods 주문 시스템 — 가동(Go-Live) 체크리스트
 
 > **목적**: 설계·빌드는 끝났고, **사용자가 직접 해야 하는 UI 작업(B트랙)**을 가동 순서대로 정리. 각 항목을 위→아래로 처리하면 실제 런칭이 된다.
-> **마지막 갱신**: 2026-05-30
+> **마지막 갱신**: 2026-06-01 (Phase 6 — Airtable 정련 백로그 추가)
 > **전제**: n8n 워크플로우 #0~#7b skeleton 빌드 완료. 상세 트리거 설정은 `airtable/automation-setup-guide.md` 참조.
 > **표기**: `[ ]` = 미완 / `[x]` = 완료 / ⏳ = 추후(의존성 대기)
 
@@ -100,6 +100,32 @@
 - [ ] ⏳ **5-1. ClickSend 알파태그 `YoungFoods` 승인 확인** (~2026-05-30) → 승인 후 **#6a/#6b 빌드** (SMS 주문확인·분실복구). credential `clicksend-creds`(`WZGjzqhfPeU4PL4i`) 이미 등록됨.
 - [ ] ⏳ **5-2. GoCardless 계정 + API key** → n8n credential `gocardless-api-key` 등록 → **#8 DD redirect handler 빌드** + Tally `Me75K8` redirectOnCompletionUrl 설정.
 - [ ] ⏳ **5-3. (옵션) #1 SMS 연동** — #6a 빌드 후 #1의 SMS sub-workflow 호출 노드 추가.
+
+---
+
+## Phase 6 — Airtable-phase 정련 백로그 (Supabase 이전 대비, 2026-06-01)
+
+> **전략**: Airtable을 "출시 가능 + 검증된 운영 스펙" 상태로 다듬는다. 여기서 정련하는 운영 흐름·규칙이 곧 **나중 Supabase ERP의 요구사항 스펙**이 된다 (헛수고 아님 = 스펙 작성). 상세 로드맵 = `ARCHITECTURE.md`.
+>
+> **★ 가드레일**: 로직을 Airtable formula/automation으로 더 깊이 박지 말 것. **n8n/코드 쪽으로 빼는 방향**으로 개선해야 정련 작업 자체가 Supabase로 이식됨. 즉 "Airtable을 더 똑똑하게"가 아니라 **"Airtable을 더 얇게(데이터 저장소답게)"**. 단순 표시용 formula(배송 품목 등)는 허용.
+
+### A. 핵심 기능 완성 (운영 필수 — 우선순위 높음)
+- [ ] **6-A1. Production planning** (make-to-stock) — Target/Safety/`default_dispatch_per_day` 초기값 입력(3 SKU, 영업·생산 협의) + Production Plan formula 완성(`production_qty`/`target_stock`/`safety_stock` lookup convert, `dispatch_forecast`·`stock_close` 교체). 상세 `airtable/production-planning.md`·`memory/airtable-base.md`.
+- [ ] **6-A2. Inventory forecast** (daily stock-take 기반) — `stock_open` D0 실측 입력 흐름 + `stock_close` formula 교체(단순버전→dispatch_forecast 반영). D+1 확정/D+2~14 추정.
+
+### B. 외부 연동 시험·가동 (계정/credential 풀리면)
+- [ ] **6-B1. GoCardless + Xero payment (batch) 연동 시험** — 네이티브 자동수금(due date 화요일) + #8 DD redirect (Phase 5-2와 연동).
+- [ ] **6-B2. ClickSend communication test** — #6a/#6b SMS 빌드·시험 (Phase 5-1과 연동).
+- [ ] **6-B3. Slack notification 정교화** — 채널별 문구·@멘션·노이즈 정리 (#1 hold·#ops-mismatch·#ops-accounts 등).
+
+### C. 품질·최적화 (지금 해도 Supabase로 이어짐)
+- [ ] **6-C1. 불필요한 작업 제거** — 미사용 워크플로우·필드·중복 로직 정리 (레거시 WF, 여분 필드 등).
+- [ ] **6-C2. 반응속도 개선** — 응답 지연 구간 로직 개선: 폴링 빈도↓·webhook 우선·배치 읽기·불필요 API콜 제거 (Airtable 5req/s 압력 완화 = Supabase 가기 전에도 이득).
+- [ ] **6-C3. 자동 이메일 내용 간소화/검토** — 환영(#7b)·복구(#6c)·인보이스(#2/#2.5) 본문 정리.
+- [ ] **6-C4. Order intake web UX 개선** — 주문 사이트 사용성.
+
+### D. 이전 대비 로직 개선
+- [ ] **6-D1.** Airtable 로직을 **migration-friendly 방향**으로 정련 (위 가드레일대로 — formula/automation 의존↓, n8n/코드로 이동). C2와 겹침.
 
 ---
 
