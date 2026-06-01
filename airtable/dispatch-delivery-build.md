@@ -6,20 +6,19 @@
 
 ---
 
-## 0. 선행 작업 — 라인아이템 lookup 3개 추가 (필수)
+## 0. 선행 작업 — 라인아이템 lookup 3개 추가 ✅ 완료 (2026-06-01)
 
-픽 리스트는 **라인아이템**을 SKU별로 합산·고객별로 묶는다. 그런데 라인아이템엔 부모 오더의 `출하 가능`·배송일·상호가 없어 필터·그룹을 못 건다. → 라인아이템 테이블(`tblVXVQzT1q8U0HJQ`)에 lookup 3개 추가:
+픽 리스트는 **라인아이템**을 SKU별로 합산·고객별로 묶는다. 그런데 라인아이템엔 부모 오더의 `출하 가능`·배송일·상호가 없어 필터·그룹을 못 건다. → 라인아이템 테이블(`tblVXVQzT1q8U0HJQ`)에 lookup 3개 추가 **완료**:
 
-| 새 필드명 (권장) | 타입 | source link | source 필드 |
-|---|---|---|---|
-| `출하 가능 (from 오더)` | Lookup | `오더` (fldWm1Rh8vSB6ZcSY) | `출하 가능` (fldeJ55Vgc1N8qufE) |
-| `배송일 (from 오더)` | Lookup | `오더` | `requested_delivery_date` (fldnOqAz5R0NE8Dpu) |
-| `상호 (from 오더)` | Lookup | `오더` | `상호` (fld3LqaFvwXTdZx8V) |
+| 필드명 (실제) | field ID | source 필드 |
+|---|---|---|
+| `출하 가능 (from 오더)` | `fld8MNbXVEtCAC4kw` | `출하 가능` (fldeJ55Vgc1N8qufE, checkbox) |
+| `requested_delivery_date (from 오더)` | `fldewkc2G1NLdPhAn` | `requested_delivery_date` (fldnOqAz5R0NE8Dpu, date) |
+| `상호 (from 오더)` | `fldIxmt5Lb0ThJCE8` | `상호` (fld3LqaFvwXTdZx8V, text) |
 
-> 만드는 법: 라인아이템 그리드 → `+` 필드 추가 → **Lookup** → "오더" 링크 선택 → 위 source 필드 선택.
-> ⚠️ checkbox lookup(`출하 가능`)은 인터페이스 필터에서 `is checked`로 거를 수 있다. (formula 결과가 checkbox라 그대로 lookup됨)
+이미 있는 라인아이템 lookup: `Order No (from 오더)`, `품목명 (from 제품)`.
 
-이미 있는 라인아이템 lookup: `고객 (from 오더)`, `Order No (from 오더)`, `품목명 (from 제품)`.
+> ⚠️ **인터페이스 필터 팁**: `출하 가능 (from 오더)`는 checkbox를 lookup한 값이라 배열이다. 인터페이스 필터에서 `is checked`(또는 `is any of → checked`)로 거른다. 만약 옵션이 애매하면 `출하 가능 (from 오더)` **is not empty** 가 아니라 반드시 **checked 값** 기준으로 필터할 것 (꺼진 오더도 `[unchecked]`로 not-empty라 오판 가능 — lookup NOT() 함정과 동류).
 
 ---
 
@@ -30,7 +29,7 @@
 ### 1a. SKU 합계 (일괄 픽)
 - **Page type**: List (또는 Grid) on 라인아이템
 - **Filter**: `출하 가능 (from 오더)` is checked
-- **(권장 추가 filter)**: `배송일 (from 오더)` is `today`(또는 내일) — 그날 출하분만
+- **(권장 추가 filter)**: `requested_delivery_date (from 오더)` is `today`(또는 내일) — 그날 출하분만
 - **Group by**: `품목명 (from 제품)`
 - **표시 / 집계**: 그룹 footer에 `수량` **Sum** → "KATSU 총 38박스" 식으로 픽 수량이 한눈에.
 - 작업자는 SKU별 총 박스 수만 보고 냉동고에서 일괄 픽.
@@ -81,7 +80,7 @@
 
 ## 4. 점검 체크리스트 (가동 전)
 
-- [ ] 라인아이템 lookup 3개 추가 (`출하 가능 (from 오더)`/`배송일 (from 오더)`/`상호 (from 오더)`)
+- [x] 라인아이템 lookup 3개 추가 (`출하 가능 (from 오더)`/`requested_delivery_date (from 오더)`/`상호 (from 오더)`) — 2026-06-01 완료
 - [ ] 픽 인터페이스 1a(SKU 합계)·1b(고객별) 빌드
 - [ ] 드라이버 인터페이스 빌드 + `오더 상태` editable
 - [ ] Delivery Slip Page Designer 레이아웃 (가격 필드 0개 재확인)
