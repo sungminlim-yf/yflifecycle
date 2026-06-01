@@ -20,6 +20,8 @@ YF 운영 시스템의 장기 아키텍처 방향 (2026-06-01 결정). 상세 �
 
 **"API limit 곧 도달" 공포 = 과대평가**: Airtable 한도는 base당 **초당 5요청(버스트)**이지 일일 총량 아님. 진짜 천장은 API속도가 아니라 ① base당 레코드 상한(오더·라인아이템 영구 누적 시 수년 뒤) ② ops seat 비용 ③ formula/automation 경직성. 초기 1~3년은 충분. 위생관리(폴링↓·webhook우선·배치읽기)로 버팀.
 
-**1→2 전환 트리거**: 레코드 상한 근접 / formula로 안 되는 로직 / seat 비용 부담 / 트랜잭션 정합성 필요 — 이 신호 오면 이전, 그 전엔 NO.
+**실행 순서 확정 (2026-06-01)**: go-live 2-3개월 남음, office 일상사용자=본인+admin1+sales1(sales는 주로 HubSpot). **"Airtable 폴백 우선 완성(운영가능까지만·gold-plating 금지) → 남는 시간 Supabase 병렬 착수(타임박스) → go-live 시점 결정 게이트: 준비되면 Supabase 바로, 아니면 Airtable로 출시해 시간벌고 천천히 이전"**. 둘 동시 system-of-record 운영 X(이중동기 회피). 다운사이드 0 구조. 어려운 부분(스키마·규칙)은 이미 설계됨→설계 아닌 *이식*. 스택=Next.js+Supabase+Vercel(주문사이트가 프론트 출발점). 연동(HubSpot/Xero/Tally/GoCardless/ClickSend)·n8n은 유지, Airtable 노드만 Supabase로 교체.
+
+**1→2 전환 트리거(완성 후 일반 신호)**: 레코드 상한 근접 / formula로 안 되는 로직 / seat 비용 부담 / 트랜잭션 정합성 필요.
 
 관련: [[yf-design-progress]] · [[order-site-deploy]](2단계 프론트 출발점=기존 Next.js 주문사이트)
